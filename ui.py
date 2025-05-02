@@ -304,10 +304,12 @@ class GameMenu:
             pygame.display.update()
 
 class GameUI:
-    def __init__(self, screen, player_name, sprite_choice):
+    def __init__(self, screen, player_name, sprite_choice, screen_width, screen_height):
         self.screen = screen
         self.player_name = player_name
         self.sprite_choice = sprite_choice
+        self.screen_width = screen_width
+        self.screen_height = screen_height
         self.font = pygame.font.SysFont("CoolveticaRg-Regular", 36)
         self.font_small = pygame.font.SysFont("CoolveticaRg-Regular", 24)
         self.hover_col = 0
@@ -326,25 +328,34 @@ class GameUI:
             self.player_color = RED
             self.ai_color = YELLOW
     
+    def get_offsets(self):
+        """calculate offsets to center the game board."""
+        x_offset = (self.screen_width - WINDOW_WIDTH) // 2
+        y_offset = (self.screen_height - WINDOW_HEIGHT) // 2
+        return x_offset, y_offset
+    
     def draw_board(self, board):
         # Clear the screen and draw the board background
         self.screen.fill(BLACK)
         
+        # Calculate centering offsets
+        x_offset, y_offset = self.get_offsets()
+        
         # Draw the header area
-        pygame.draw.rect(self.screen, BLACK, (0, 0, WINDOW_WIDTH, SQUARESIZE))
+        pygame.draw.rect(self.screen, BLACK, (x_offset, y_offset, WINDOW_WIDTH, SQUARESIZE))
         
         # Draw the board slots
         for c in range(COLUMN_COUNT):
             for r in range(ROW_COUNT):
                 # Draw the blue grid
                 pygame.draw.rect(self.screen, BLUE, 
-                                (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, 
+                                (x_offset + c * SQUARESIZE, y_offset + r * SQUARESIZE + SQUARESIZE, 
                                  SQUARESIZE, SQUARESIZE))
                 
                 # Draw the empty slots
                 pygame.draw.circle(self.screen, BLACK, 
-                                  (int(c * SQUARESIZE + SQUARESIZE/2), 
-                                   int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE/2)), 
+                                  (x_offset + int(c * SQUARESIZE + SQUARESIZE/2), 
+                                   y_offset + int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE/2)), 
                                   RADIUS)
         
         # Draw the pieces
@@ -352,42 +363,55 @@ class GameUI:
             for r in range(ROW_COUNT):
                 if board[r][c] == PLAYER_PIECE:
                     pygame.draw.circle(self.screen, self.player_color, 
-                                      (int(c * SQUARESIZE + SQUARESIZE/2), 
-                                       int(WINDOW_HEIGHT - r * SQUARESIZE - SQUARESIZE/2)), 
+                                      (x_offset + int(c * SQUARESIZE + SQUARESIZE/2), 
+                                       y_offset + int(WINDOW_HEIGHT - r * SQUARESIZE - SQUARESIZE/2)), 
                                       RADIUS)
                 elif board[r][c] == AI_PIECE:
                     pygame.draw.circle(self.screen, self.ai_color, 
-                                      (int(c * SQUARESIZE + SQUARESIZE/2), 
-                                       int(WINDOW_HEIGHT - r * SQUARESIZE - SQUARESIZE/2)), 
+                                      (x_offset + int(c * SQUARESIZE + SQUARESIZE/2), 
+                                       y_offset + int(WINDOW_HEIGHT - r * SQUARESIZE - SQUARESIZE/2)), 
                                       RADIUS)
         
         # Draw player info
         player_text = self.font_small.render(f"Player: {self.player_name}", True, self.player_color)
-        self.screen.blit(player_text, (10, 10))
+        self.screen.blit(player_text, (x_offset + 10, y_offset + 10))
     
     def update_hover(self, x_pos):
+        # Calculate centering offsets
+        x_offset, y_offset = self.get_offsets()
+        
+        # Adjust x_pos for offset
+        adjusted_x_pos = x_pos - x_offset
+        
         # Show piece hover effect
-        pygame.draw.rect(self.screen, BLACK, (0, 0, WINDOW_WIDTH, SQUARESIZE))
+        pygame.draw.rect(self.screen, BLACK, (x_offset, y_offset, WINDOW_WIDTH, SQUARESIZE))
         
         # Draw player info and score again (since we cleared the top)
         player_text = self.font_small.render(f"Player: {self.player_name}", True, self.player_color)
-        self.screen.blit(player_text, (10, 10))
+        self.screen.blit(player_text, (x_offset + 10, y_offset + 10))
         
         # Calculate column from x position
-        self.hover_col = min(max(x_pos // SQUARESIZE, 0), COLUMN_COUNT - 1)
+        self.hover_col = min(max(adjusted_x_pos // SQUARESIZE, 0), COLUMN_COUNT - 1)
         
         # Draw hover piece
         pygame.draw.circle(self.screen, self.player_color, 
-                          (self.hover_col * SQUARESIZE + SQUARESIZE//2, SQUARESIZE//2), 
+                          (x_offset + self.hover_col * SQUARESIZE + SQUARESIZE//2, 
+                           y_offset + SQUARESIZE//2), 
                           RADIUS)
         
         pygame.display.update()
     
     def draw_score(self, score):
+        # Calculate centering offsets
+        x_offset, y_offset = self.get_offsets()
+        
         score_text = self.font_small.render(f"Score: {score}", True, WHITE)
-        self.screen.blit(score_text, (WINDOW_WIDTH - score_text.get_width() - 10, 10))
+        self.screen.blit(score_text, (x_offset + WINDOW_WIDTH - score_text.get_width() - 10, y_offset + 10))
     
     def show_winner(self, winner):
+        # Calculate centering offsets
+        x_offset, y_offset = self.get_offsets()
+        
         label_bg = pygame.Surface((400, 80))
         label_bg.set_alpha(200)  # Semi-transparent
         label_bg.fill(BLACK)
@@ -397,6 +421,7 @@ class GameUI:
         else:
             label = self.font.render(f"{winner} wins!", True, self.player_color)
         
-        self.screen.blit(label_bg, (WINDOW_WIDTH//2 - 200, WINDOW_HEIGHT//2 - 40))
-        self.screen.blit(label, (WINDOW_WIDTH//2 - label.get_width()//2, WINDOW_HEIGHT//2 - label.get_height()//2))
+        self.screen.blit(label_bg, (x_offset + WINDOW_WIDTH//2 - 200, y_offset + WINDOW_HEIGHT//2 - 40))
+        self.screen.blit(label, (x_offset + WINDOW_WIDTH//2 - label.get_width()//2, 
+                                y_offset + WINDOW_HEIGHT//2 - label.get_height()//2))
         pygame.display.update()

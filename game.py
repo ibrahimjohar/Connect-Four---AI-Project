@@ -14,7 +14,10 @@ class Game:
         self.sprite_choice = sprite_choice
 
         self.board = Board()
-        self.ui = GameUI(screen, player_name, sprite_choice)
+        # Store current screen dimensions
+        self.screen_width = WINDOW_WIDTH
+        self.screen_height = WINDOW_HEIGHT
+        self.ui = GameUI(screen, player_name, sprite_choice, self.screen_width, self.screen_height)
         self.ai = AIPlayer(difficulty)
 
         self.game_over = False
@@ -32,12 +35,17 @@ class Game:
         if self.fullscreen:
             # Enter fullscreen at current display resolution
             self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+            # Update screen dimensions
+            self.screen_width, self.screen_height = self.screen.get_size()
         else:
             # Return to original window size
             self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-        
+            self.screen_width, self.screen_height = WINDOW_WIDTH, WINDOW_HEIGHT
+            
         # Update UI to draw on the new screen surface
         self.ui.screen = self.screen
+        self.ui.screen_width = self.screen_width
+        self.ui.screen_height = self.screen_height
         
         # Clear the event queue to prevent stale inputs
         pygame.event.clear()
@@ -89,7 +97,10 @@ class Game:
                 self.ui.update_hover(event.pos[0])
 
             if event.type == pygame.MOUSEBUTTONDOWN and self.turn == PLAYER:
-                col = int(event.pos[0] // SQUARESIZE)
+                # Adjust mouse x position for centering offset
+                x_offset = (self.screen_width - WINDOW_WIDTH) // 2
+                adjusted_x_pos = event.pos[0] - x_offset
+                col = int(adjusted_x_pos // SQUARESIZE)
 
                 if self.board.is_valid_location(col):
                     row = self.board.get_next_open_row(col)
