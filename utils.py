@@ -1,0 +1,36 @@
+# utils.py
+import pygame
+
+# Colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
+LIGHT_GREY = (200, 200, 200)
+LIGHT_BLUE = (100, 100, 255)
+GOLD = (255, 215, 0)
+SILVER = (192, 192, 192)
+BRONZE = (205, 127, 50)
+
+# Game constants
+ROW_COUNT = 6
+COLUMN_COUNT = 7
+SQUARESIZE = 100
+RADIUS = int(SQUARESIZE/2 - 5)
+WINDOW_WIDTH = COLUMN_COUNT * SQUARESIZE
+WINDOW_HEIGHT = (ROW_COUNT + 1) * SQUARESIZE
+FPS = 60
+
+# Game pieces
+EMPTY = 0
+PLAYER_PIECE = 1
+AI_PIECE = 2
+
+# Players
+PLAYER = 0
+AI = 1
+
+# Window lengths for evaluating game state
+WINDOW_LENGTH = 4
