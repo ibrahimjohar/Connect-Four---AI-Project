@@ -143,7 +143,7 @@ class Game:
                 pygame.time.wait(3000)
                 # Return to menu
                 from ui import GameMenu
-                menu = GameMenu(self.screen)
+                menu = GameMenu(self.screen, self.screen_width, self.screen_height)
                 player_name, difficulty, sprite = menu.show()
                 self.__init__(self.screen, player_name, difficulty, sprite)
 

@@ -15,7 +15,7 @@ def main():
     loading_screen.show()
     
     # Show menu
-    menu = GameMenu(screen)
+    menu = GameMenu(screen, WINDOW_WIDTH, WINDOW_HEIGHT)
     player_name, difficulty, sprite = menu.show()
     
     # Start game

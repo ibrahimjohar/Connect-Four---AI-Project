@@ -157,19 +157,30 @@ class DifficultySelector:
         return self.difficulties[self.selected]
 
 class GameMenu:
-    def __init__(self, screen):
+    def __init__(self, screen, screen_width, screen_height):
         self.screen = screen
+        self.screen_width = screen_width
+        self.screen_height = screen_height
         self.font_large = pygame.font.SysFont("CoolveticaRg-Regular", 48)
         self.font = pygame.font.SysFont("CoolveticaRg-Regular", 32)
         self.name_input = ""
         self.active = True
         
+        # Calculate centering offsets
+        self.x_offset, self.y_offset = self.get_offsets()
+        
         # Create UI elements
-        center_x = WINDOW_WIDTH // 2 - 150
-        self.sprite_selector = SpriteSelector(screen, center_x, 300)
-        self.difficulty_selector = DifficultySelector(screen, center_x, 450)
-        self.start_button = Button(screen, "Start Game", center_x, 520, 300, 50, GREEN, (100, 255, 100))
-        self.leaderboard_button = Button(screen, "Leaderboard", center_x, 580, 300, 50, BLUE, LIGHT_BLUE)
+        center_x = self.x_offset + WINDOW_WIDTH // 2 - 150
+        self.sprite_selector = SpriteSelector(screen, center_x, self.y_offset + 300)
+        self.difficulty_selector = DifficultySelector(screen, center_x, self.y_offset + 450)
+        self.start_button = Button(screen, "Start Game", center_x, self.y_offset + 520, 300, 50, GREEN, (100, 255, 100))
+        self.leaderboard_button = Button(screen, "Leaderboard", center_x, self.y_offset + 580, 300, 50, BLUE, LIGHT_BLUE)
+    
+    def get_offsets(self):
+        """Calculate offsets to center the menu within the screen."""
+        x_offset = (self.screen_width - WINDOW_WIDTH) // 2
+        y_offset = (self.screen_height - WINDOW_HEIGHT) // 2
+        return x_offset, y_offset
     
     def show(self):
         active_input = True
@@ -214,35 +225,35 @@ class GameMenu:
             
             # Draw title
             title = self.font_large.render("Connect 4", True, BLUE)
-            self.screen.blit(title, (WINDOW_WIDTH//2 - title.get_width()//2, 50))
+            self.screen.blit(title, (self.x_offset + WINDOW_WIDTH//2 - title.get_width()//2, self.y_offset + 50))
             
             # Draw name input field
             name_prompt = self.font.render("Enter your name:", True, WHITE)
-            self.screen.blit(name_prompt, (WINDOW_WIDTH//2 - 150, 150))
+            self.screen.blit(name_prompt, (self.x_offset + WINDOW_WIDTH//2 - 150, self.y_offset + 150))
             
             pygame.draw.rect(self.screen, WHITE if active_input else LIGHT_GREY, 
-                            (WINDOW_WIDTH//2 - 150, 190, 300, 40))
+                            (self.x_offset + WINDOW_WIDTH//2 - 150, self.y_offset + 190, 300, 40))
             pygame.draw.rect(self.screen, BLACK, 
-                            (WINDOW_WIDTH//2 - 150, 190, 300, 40), 2)
+                            (self.x_offset + WINDOW_WIDTH//2 - 150, self.y_offset + 190, 300, 40), 2)
             
             name_surface = self.font.render(self.name_input, True, BLACK)
-            self.screen.blit(name_surface, (WINDOW_WIDTH//2 - 145, 195))
+            self.screen.blit(name_surface, (self.x_offset + WINDOW_WIDTH//2 - 145, self.y_offset + 195))
             
             # Draw cursor for text input
             if active_input and pygame.time.get_ticks() % 1000 < 500:
                 cursor_pos = self.font.size(self.name_input)[0]
                 pygame.draw.line(self.screen, BLACK, 
-                                (WINDOW_WIDTH//2 - 145 + cursor_pos, 195),
-                                (WINDOW_WIDTH//2 - 145 + cursor_pos, 195 + 30), 2)
+                                (self.x_offset + WINDOW_WIDTH//2 - 145 + cursor_pos, self.y_offset + 195),
+                                (self.x_offset + WINDOW_WIDTH//2 - 145 + cursor_pos, self.y_offset + 195 + 30), 2)
             
             # Draw sprite selector
             sprite_text = self.font.render("Choose your piece:", True, WHITE)
-            self.screen.blit(sprite_text, (WINDOW_WIDTH//2 - 150, 260))
+            self.screen.blit(sprite_text, (self.x_offset + WINDOW_WIDTH//2 - 150, self.y_offset + 260))
             self.sprite_selector.draw()
             
             # Draw difficulty selector
             diff_text = self.font.render("Select difficulty:", True, WHITE)
-            self.screen.blit(diff_text, (WINDOW_WIDTH//2 - 150, 410))
+            self.screen.blit(diff_text, (self.x_offset + WINDOW_WIDTH//2 - 150, self.y_offset + 410))
             self.difficulty_selector.draw()
             
             # Draw buttons
@@ -280,26 +291,28 @@ class GameMenu:
             
             self.screen.fill(BLACK)
             
+            x_offset, y_offset = self.get_offsets()
+            
             # Draw title
             title = self.font_large.render("Leaderboard", True, GOLD)
-            self.screen.blit(title, (WINDOW_WIDTH//2 - title.get_width()//2, 50))
+            self.screen.blit(title, (x_offset + WINDOW_WIDTH//2 - title.get_width()//2, y_offset + 50))
             
             # Draw leaderboard entries
-            y_pos = 150
+            y_pos = y_offset + 150
             if not sorted_leaderboard:
                 no_scores = self.font.render("No scores yet!", True, WHITE)
-                self.screen.blit(no_scores, (WINDOW_WIDTH//2 - no_scores.get_width()//2, y_pos))
+                self.screen.blit(no_scores, (x_offset + WINDOW_WIDTH//2 - no_scores.get_width()//2, y_pos))
             else:
                 for i, (name, score) in enumerate(sorted_leaderboard[:10]):  # Show top 10
                     rank = f"{i+1}. {name}: {score}"
                     color = GOLD if i == 0 else SILVER if i == 1 else BRONZE if i == 2 else WHITE
                     rank_text = self.font.render(rank, True, color)
-                    self.screen.blit(rank_text, (WINDOW_WIDTH//2 - rank_text.get_width()//2, y_pos))
+                    self.screen.blit(rank_text, (x_offset + WINDOW_WIDTH//2 - rank_text.get_width()//2, y_pos))
                     y_pos += 40
             
             # Draw back instruction
             back_text = self.font.render("Press any key to return", True, LIGHT_GREY)
-            self.screen.blit(back_text, (WINDOW_WIDTH//2 - back_text.get_width()//2, WINDOW_HEIGHT - 100))
+            self.screen.blit(back_text, (x_offset + WINDOW_WIDTH//2 - back_text.get_width()//2, self.y_offset + WINDOW_HEIGHT - 100))
             
             pygame.display.update()
 
