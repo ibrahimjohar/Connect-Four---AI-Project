@@ -35,8 +35,17 @@ class Game:
         else:
             # Return to original window size
             self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        
         # Update UI to draw on the new screen surface
         self.ui.screen = self.screen
+        
+        # Clear the event queue to prevent stale inputs
+        pygame.event.clear()
+        
+        # Force a redraw of the entire screen
+        self.ui.draw_board(self.board.board)
+        self.ui.draw_score(self.score)
+        pygame.display.flip()
 
     def load_leaderboard(self):
         try:
