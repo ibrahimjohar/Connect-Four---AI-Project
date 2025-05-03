@@ -111,23 +111,48 @@ class Game:
                         self.ui.show_winner(self.player_name)
                         self.game_over = True
                         self.update_leaderboard()
+                    elif len(self.board.get_valid_locations()) == 0:
+                        # Draw: board is full and no winner
+                        self.ui.show_winner("Draw")
+                        self.game_over = True
+                        self.update_leaderboard()
 
                     self.turn = AI
 
     def ai_move(self):
         if self.turn == AI and not self.game_over:
+            # Check if there are valid moves
+            valid_locations = self.board.get_valid_locations()
+            if not valid_locations:
+                # Board is full, declare a draw
+                self.ui.show_winner("Draw")
+                self.game_over = True
+                self.update_leaderboard()
+                return
+
             col = self.ai.get_move(self.board)
+            if col is None or not self.board.is_valid_location(col):
+                # Log error and treat as draw for safety
+                print(f"AI returned invalid move: {col}. Valid locations: {valid_locations}")
+                self.ui.show_winner("Draw")
+                self.game_over = True
+                self.update_leaderboard()
+                return
 
-            if self.board.is_valid_location(col):
-                row = self.board.get_next_open_row(col)
-                self.board.drop_piece(row, col, AI_PIECE)
+            row = self.board.get_next_open_row(col)
+            self.board.drop_piece(row, col, AI_PIECE)
+            print(f"AI placed piece in column {col}, row {row}")  # Debug log
 
-                if self.board.winning_move(AI_PIECE):
-                    self.ui.show_winner("AI")
-                    self.game_over = True
-                    self.update_leaderboard()
+            if self.board.winning_move(AI_PIECE):
+                self.ui.show_winner("AI")
+                self.game_over = True
+                self.update_leaderboard()
+            elif len(self.board.get_valid_locations()) == 0:
+                self.ui.show_winner("Draw")
+                self.game_over = True
+                self.update_leaderboard()
 
-                self.turn = PLAYER
+            self.turn = PLAYER
 
     def run(self):
         while True:

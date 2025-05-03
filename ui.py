@@ -39,7 +39,7 @@ class Button:
         self.rect = pygame.Rect(x, y, width, height)
         self.color = color
         self.hover_color = hover_color
-        self.font = pygame.font.SysFont("CoolveticRg-Regular", 24)
+        self.font = pygame.font.SysFont("CoolveticaRg-Regular", 24)
         self.is_hovered = False
     
     def draw(self):
@@ -98,7 +98,7 @@ class SpriteSelector:
         if self.sprites[self.current_sprite] == "Red":
             return RED
         elif self.sprites[self.current_sprite] == "Blue":
-            return BLUE
+            return LIGHT_BLUE
         elif self.sprites[self.current_sprite] == "Green":
             return GREEN
         return RED
@@ -332,11 +332,11 @@ class GameUI:
             self.player_color = RED
             self.ai_color = YELLOW
         elif sprite_choice == "Blue":
-            self.player_color = BLUE
+            self.player_color = LIGHT_BLUE
             self.ai_color = RED
         elif sprite_choice == "Green":
             self.player_color = GREEN
-            self.ai_color = BLUE
+            self.ai_color = LIGHT_BLUE
         else:
             self.player_color = RED
             self.ai_color = YELLOW
@@ -431,6 +431,8 @@ class GameUI:
         
         if winner == "AI":
             label = self.font.render("AI wins!", True, self.ai_color)
+        elif winner == "Draw":
+            label = self.font.render("Game is a Draw!", True, WHITE)
         else:
             label = self.font.render(f"{winner} wins!", True, self.player_color)
         
