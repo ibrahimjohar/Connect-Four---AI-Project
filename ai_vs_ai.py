@@ -5,6 +5,7 @@ from board import Board
 from ui import GameUI, Button, GameMenu
 from utils import *
 from ai import AIPlayer
+import datetime
 
 class RandomizedAIPlayer(AIPlayer):
     def minimax(self, board, depth, alpha, beta, maximizing_player):
@@ -68,6 +69,105 @@ class AIVsAIGame:
         self.ai2_score = 0
         self.game_over = False
         self.player_moves = 0
+
+    def load_leaderboard(self):
+        try:
+            with open("ai_vs_ai_leaderboard.txt", "r") as file:
+                leaderboard = []
+                for line in file:
+                    leaderboard.append(line.strip())
+                return leaderboard
+        except FileNotFoundError:
+            return []
+
+    def save_leaderboard(self, leaderboard):
+        with open("ai_vs_ai_leaderboard.txt", "w") as file:
+            for entry in leaderboard:
+                file.write(f"{entry}\n")
+
+    def update_leaderboard(self, result_entry):
+        leaderboard = self.load_leaderboard()
+        leaderboard.append(result_entry)
+        # Sort by the highest score in the entry (extract numbers and sort)
+        def extract_score(entry):
+            import re
+            scores = [int(s) for s in re.findall(r": (\d+)", entry)]
+            return max(scores) if scores else 0
+        leaderboard.sort(key=extract_score, reverse=True)
+        self.save_leaderboard(leaderboard)
+
+    def show_leaderboard(self):
+        leaderboard = self.load_leaderboard()
+        # Display like the user leaderboard, but with AI names and scores
+        pygame.event.clear()
+        viewing = True
+        scale_factor = min(self.screen_width / WINDOW_WIDTH, self.screen_height / WINDOW_HEIGHT)
+        font_large = pygame.font.Font(BOXING_FONT_PATH, int(48 * scale_factor))
+        font = pygame.font.Font(BOXING_FONT_PATH, int(32 * scale_factor))
+        center_x = self.screen_width / 2
+        scroll_offset = 0
+        max_visible = 10
+        while viewing:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.VIDEORESIZE:
+                    self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                    self.screen_width = event.w
+                    self.screen_height = event.h
+                    scale_factor = min(self.screen_width / WINDOW_WIDTH, self.screen_height / WINDOW_HEIGHT)
+                    font_large = pygame.font.Font(BOXING_FONT_PATH, int(48 * scale_factor))
+                    font = pygame.font.Font(BOXING_FONT_PATH, int(32 * scale_factor))
+                    center_x = self.screen_width / 2
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_DOWN:
+                        if scroll_offset < max(0, len(leaderboard) - max_visible):
+                            scroll_offset += 1
+                    if event.key == pygame.K_UP:
+                        if scroll_offset > 0:
+                            scroll_offset -= 1
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
+                        viewing = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 4:  # Scroll up
+                        if scroll_offset > 0:
+                            scroll_offset -= 1
+                    if event.button == 5:  # Scroll down
+                        if scroll_offset < max(0, len(leaderboard) - max_visible):
+                            scroll_offset += 1
+                    if event.button == 1 or event.button == 3:
+                        viewing = False
+            # Draw background image (other) with aspect ratio preserved
+            self.ui.blit_centered_bg(self.ui.bg_game, self.screen)
+            # Draw semi-transparent overlay over the entire screen
+            overlay_surface = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
+            overlay_surface.fill((0, 0, 0, 180))
+            self.screen.blit(overlay_surface, (0, 0))
+            # Title
+            title = font_large.render("AI vs AI Leaderboard", True, GOLD)
+            self.screen.blit(title, (center_x - title.get_width() / 2, 80 * scale_factor))
+            # Entries (with scroll)
+            y_start = 180 * scale_factor
+            line_height = 40 * scale_factor
+            if not leaderboard:
+                no_scores = font.render("No AI vs AI games yet!", True, WHITE)
+                self.screen.blit(no_scores, (center_x - no_scores.get_width() / 2, y_start))
+            else:
+                for i, entry in enumerate(leaderboard[scroll_offset:scroll_offset+max_visible]):
+                    color = GOLD if i+scroll_offset == 0 else SILVER if i+scroll_offset == 1 else BRONZE if i+scroll_offset == 2 else WHITE
+                    entry_text = font.render(entry, True, color)
+                    self.screen.blit(entry_text, (center_x - entry_text.get_width() / 2, y_start + i * line_height))
+            # Scroll instructions
+            if len(leaderboard) > max_visible:
+                small_font = pygame.font.Font(BOXING_FONT_PATH, int(20 * scale_factor))
+                scroll_text = small_font.render("Scroll to see more", True, LIGHT_GREY)
+                self.screen.blit(scroll_text, (center_x - scroll_text.get_width() / 2, self.screen_height - 80 * scale_factor))
+            # Back instruction
+            small_font = pygame.font.Font(BOXING_FONT_PATH, int(20 * scale_factor))
+            back_text = small_font.render("Press any key to return", True, LIGHT_GREY)
+            self.screen.blit(back_text, (center_x - back_text.get_width() / 2, self.screen_height - 40 * scale_factor))
+            pygame.display.update()
 
     def run(self):
         from ui import Button
@@ -167,6 +267,19 @@ class AIVsAIGame:
             self.ui.draw_board(self.board.board)
             self.ui.draw_score((self.ai1_score, self.ai2_score))
             if self.game_over:
+                # Log result to AI vs AI leaderboard with timestamp, move count, and winner
+                now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+                total_moves = sum(1 for row in self.board.board.flatten() if row != 0)
+                if self.board.winning_move(PLAYER_PIECE):
+                    winner = "AI 1"
+                    result_entry = f"[{now}] Winner: AI 1 | Moves: {total_moves} | AI 1: {self.ai1_score}, AI 2: {self.ai2_score}"
+                elif self.board.winning_move(AI_PIECE):
+                    winner = "AI 2"
+                    result_entry = f"[{now}] Winner: AI 2 | Moves: {total_moves} | AI 2: {self.ai2_score}, AI 1: {self.ai1_score}"
+                else:
+                    winner = "Draw"
+                    result_entry = f"[{now}] Winner: Draw | Moves: {total_moves} | Draw: {self.ai1_score}, {self.ai2_score}"
+                self.update_leaderboard(result_entry)
                 pygame.time.wait(1000)
                 # Show buttons: View Leaderboard, Back to Menu
                 button_width = 300
@@ -202,9 +315,7 @@ class AIVsAIGame:
                         leaderboard_button.check_hover(pygame.mouse.get_pos())
                         menu_button.check_hover(pygame.mouse.get_pos())
                         if leaderboard_button.is_clicked(pygame.mouse.get_pos(), event):
-                            current_w, current_h = self.screen.get_size()
-                            menu = GameMenu(self.screen, current_w, current_h)
-                            menu.show_leaderboard()
+                            self.show_leaderboard()
                             pygame.event.clear()
                             continue
                         if menu_button.is_clicked(pygame.mouse.get_pos(), event):
