@@ -112,10 +112,10 @@ One of the main challenges encountered was optimizing the performance of the Min
 ## **7. Team Contributions**
 
 ### Team Members and Responsibilities:
-- **[Member 1 Name]:** Responsible for AI algorithm development (Minimax, Alpha-Beta Pruning).
-- **[Member 2 Name]:** Handled game rule modifications and board design.
-- **[Member 3 Name]:** Focused on implementing the user interface and integrating AI with gameplay.
-- **[Member 4 Name]:** Conducted performance testing and evaluation of the AI's decisions.
+- **Emman Ali:** Responsible for AI algorithm development (Minimax, Alpha-Beta Pruning).
+- **Amna Khan:** Handled game rule modifications and board design.
+- **Ibrahim Johar:** Focused on implementing the user interface and integrating AI with gameplay.
+- **Areeba Hasnain:** Conducted performance testing and evaluation of the AI's decisions.
 
 ---
 
