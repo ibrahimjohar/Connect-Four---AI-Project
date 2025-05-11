@@ -8,73 +8,11 @@ class AIPlayer:
     
     def get_move(self, board):
         if self.difficulty == "easy":
-            return self.random_move(board)
+            return self.minimax_move(board, depth=1)
         elif self.difficulty == "medium":
-            return self.monte_carlo_move(board)
+            return self.minimax_move(board, depth=3)
         else:  # hard
-            return self.minimax_move(board)
-    
-    def random_move(self, board):
-        valid_locations = board.get_valid_locations()
-        if valid_locations:
-            return random.choice(valid_locations)
-        return 0
-    
-    def monte_carlo_move(self, board):
-        valid_locations = board.get_valid_locations()
-        if not valid_locations:
-            return 0
-        
-        # Run simulations for each possible move
-        scores = {}
-        simulations = 100  # Number of simulations per move
-        
-        for col in valid_locations:
-            scores[col] = 0
-            for _ in range(simulations):
-                # Make a copy of the board
-                temp_board = board.copy()
-                row = temp_board.get_next_open_row(col)
-                temp_board.drop_piece(row, col, 2)  # AI piece
-                
-                # Run a random simulation
-                result = self.simulate_random_game(temp_board)
-                if result == 2:  # AI wins
-                    scores[col] += 1
-                elif result == 0:  # Draw
-                    scores[col] += 0.5
-        
-        # Choose the move with the highest score
-        best_score = -1
-        best_col = random.choice(valid_locations)
-        
-        for col in valid_locations:
-            if scores[col] > best_score:
-                best_score = scores[col]
-                best_col = col
-        
-        return best_col
-    
-    def simulate_random_game(self, board):
-        temp_board = board.copy()
-        current_player = 1  # Start with player
-        
-        while not temp_board.is_terminal_node():
-            valid_locations = temp_board.get_valid_locations()
-            if not valid_locations:
-                return 0  # Draw
-            
-            col = random.choice(valid_locations)
-            row = temp_board.get_next_open_row(col)
-            temp_board.drop_piece(row, col, current_player)
-            
-            if temp_board.winning_move(current_player):
-                return current_player
-            
-            # Switch player
-            current_player = 3 - current_player  # 1 -> 2, 2 -> 1
-        
-        return 0  # Draw
+            return self.minimax_move(board, depth=5)
     
     def minimax_move(self, board, depth=5):
         col, _ = self.minimax(board, depth, -math.inf, math.inf, True)

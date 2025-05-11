@@ -3,6 +3,7 @@ import pygame
 import time
 import os
 from utils import *
+import pygame.gfxdraw
 
 class LoadingScreen:
     def __init__(self, screen):
@@ -86,14 +87,13 @@ class SpriteSelector:
         self.screen = screen
         self.x = x
         self.y = y
-        self.width = 300
-        self.height = 100
-        self.font = pygame.font.SysFont("CoolveticaRg-Regular", 24)
+        self.width = 400
+        self.height = 150
+        self.font = pygame.font.SysFont("CoolveticaRg-Regular", 28)
         self.sprites = ["Red", "Blue", "Green"]
         self.current_sprite = 0
-        
-        self.left_button = Button(screen, "<", x, y, 30, 30, LIGHT_GREY, WHITE)
-        self.right_button = Button(screen, ">", x + self.width - 30, y, 30, 30, LIGHT_GREY, WHITE)
+        self.left_button_rect = pygame.Rect(0, 0, 40, 40)
+        self.right_button_rect = pygame.Rect(0, 0, 40, 40)
     
     def update_layout(self):
         self.screen_width = self.screen.get_width()
@@ -102,24 +102,49 @@ class SpriteSelector:
         self.selector_x = self.center_x - self.width // 2
     
     def draw(self):
-        self.update_layout()
+        # Center horizontally
+        screen_width = self.screen.get_width()
+        center_x = screen_width // 2
+        selector_width = self.width
+        selector_x = center_x - selector_width // 2
         y = self.y
-        # Update button positions
-        self.left_button.rect.x = self.selector_x
-        self.left_button.rect.y = y
-        self.right_button.rect.x = self.selector_x + self.width - 30
-        self.right_button.rect.y = y
         # Draw selector box
-        pygame.draw.rect(self.screen, WHITE, (self.selector_x + 40, y, self.width - 80, self.height), 2)
+        box_rect = pygame.Rect(selector_x + 40, y, self.width - 80, self.height)
+        pygame.draw.rect(self.screen, WHITE, box_rect, 2)
         # Draw sprite name
         text = self.font.render(self.sprites[self.current_sprite], True, WHITE)
-        self.screen.blit(text, (self.center_x - text.get_width() // 2, y))
-        # Draw sprite preview circle
+        self.screen.blit(text, (center_x - text.get_width() // 2, y + 10))
+        # Supersample the sprite preview circle
+        supersample = 4
+        preview_size = 80  # diameter of preview area
+        surf_size = preview_size * supersample
+        preview_surface = pygame.Surface((surf_size, surf_size), pygame.SRCALPHA)
         sprite_color = self.get_sprite_color()
-        pygame.draw.circle(self.screen, sprite_color, (self.center_x, y + 60), 20)
-        # Draw navigation buttons
-        self.left_button.draw()
-        self.right_button.draw()
+        # Draw filled and antialiased circle to preview_surface
+        cx = surf_size // 2
+        cy = surf_size // 2
+        radius = 32 * supersample
+        pygame.gfxdraw.filled_circle(preview_surface, int(cx), int(cy), int(radius), sprite_color)
+        pygame.gfxdraw.aacircle(preview_surface, int(cx), int(cy), int(radius), sprite_color)
+        # Downscale and blit to screen
+        small_preview = pygame.transform.smoothscale(preview_surface, (preview_size, preview_size))
+        piece_center_y = int(box_rect.centery + 20)
+        self.screen.blit(small_preview, (center_x - preview_size // 2, piece_center_y - preview_size // 2))
+        # Draw navigation arrows (no bg, just white text, vertically aligned with the box)
+        arrow_font = pygame.font.SysFont("CoolveticaRg-Regular", 48)
+        left_arrow = arrow_font.render("<", True, WHITE)
+        right_arrow = arrow_font.render(">", True, WHITE)
+        # Align arrows with the vertical center of the box
+        arrow_gap = 24
+        arrow_y = box_rect.centery - left_arrow.get_height() // 2
+        left_x = box_rect.left - arrow_gap - left_arrow.get_width()
+        right_x = box_rect.right + arrow_gap
+        self.left_button_rect.x = left_x
+        self.left_button_rect.y = arrow_y
+        self.right_button_rect.x = right_x
+        self.right_button_rect.y = arrow_y
+        self.screen.blit(left_arrow, (left_x, arrow_y))
+        self.screen.blit(right_arrow, (right_x, arrow_y))
     
     def get_sprite_color(self):
         if self.sprites[self.current_sprite] == "Red":
@@ -131,14 +156,11 @@ class SpriteSelector:
         return RED
     
     def handle_event(self, event, mouse_pos):
-        if self.left_button.is_clicked(mouse_pos, event):
-            self.current_sprite = (self.current_sprite - 1) % len(self.sprites)
-        elif self.right_button.is_clicked(mouse_pos, event):
-            self.current_sprite = (self.current_sprite + 1) % len(self.sprites)
-        
-        # Update button hover states
-        self.left_button.check_hover(mouse_pos)
-        self.right_button.check_hover(mouse_pos)
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.left_button_rect.collidepoint(mouse_pos):
+                self.current_sprite = (self.current_sprite - 1) % len(self.sprites)
+            elif self.right_button_rect.collidepoint(mouse_pos):
+                self.current_sprite = (self.current_sprite + 1) % len(self.sprites)
     
     def get_selected_sprite(self):
         return self.sprites[self.current_sprite]
@@ -208,6 +230,9 @@ class GameMenu:
         self.font = pygame.font.SysFont("CoolveticaRg-Regular", int(32 * self.scale_factor))
         self.name_input = ""
         self.active = True
+        # Load background images
+        self.bg_title = pygame.image.load(os.path.join("imgs", "bg1.jpg")).convert()
+        self.bg_other = pygame.image.load(os.path.join("imgs", "bg2.jpg")).convert()
         self.update_layout()
 
     def update_layout(self):
@@ -267,7 +292,9 @@ class GameMenu:
                     self.handle_resize(event.w, event.h)
                 if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
                     waiting = False
-            self.screen.fill(BLACK)
+            # Draw background image (title)
+            bg = pygame.transform.smoothscale(self.bg_title, (self.screen_width, self.screen_height))
+            self.screen.blit(bg, (0, 0))
             center_x = self.screen_width / 2
             center_y = self.screen_height / 2
             title = self.font_large.render("Connect 4", True, BLUE)
@@ -305,7 +332,9 @@ class GameMenu:
                         name_input = name_input[:-1]
                     elif len(name_input) < 20:
                         name_input += event.unicode
-            self.screen.fill(BLACK)
+            # Draw background image (other)
+            bg = pygame.transform.smoothscale(self.bg_other, (self.screen_width, self.screen_height))
+            self.screen.blit(bg, (0, 0))
             back_button.check_hover(pygame.mouse.get_pos())
             next_button.check_hover(pygame.mouse.get_pos())
             prompt = self.font.render("Enter your name:", True, WHITE)
@@ -359,9 +388,11 @@ class GameMenu:
                 sprite_selector.handle_event(event, mouse_pos)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                     return sprite_selector.get_selected_sprite(), False, True
-                if event.type == pygame.MOUSEBUTTONDOWN and sprite_selector.left_button.is_hovered or sprite_selector.right_button.is_hovered:
+                if event.type == pygame.MOUSEBUTTONDOWN and sprite_selector.left_button_rect.collidepoint(mouse_pos) or sprite_selector.right_button_rect.collidepoint(mouse_pos):
                     continue
-            self.screen.fill(BLACK)
+            # Draw background image (other)
+            bg = pygame.transform.smoothscale(self.bg_other, (self.screen_width, self.screen_height))
+            self.screen.blit(bg, (0, 0))
             back_button.check_hover(mouse_pos)
             next_button.check_hover(mouse_pos)
             prompt = self.font.render("Choose your piece:", True, WHITE)
@@ -377,7 +408,9 @@ class GameMenu:
     def show_difficulty_selection(self):
         difficulty_selector = DifficultySelector(self.screen, 0, 0)
         while True:
-            self.screen.fill(BLACK)
+            # Draw background image (other)
+            bg = pygame.transform.smoothscale(self.bg_other, (self.screen_width, self.screen_height))
+            self.screen.blit(bg, (0, 0))
             center_x = self.screen_width / 2
             center_y = self.screen_height / 2
             scale_factor = self.scale_factor
@@ -476,7 +509,9 @@ class GameMenu:
                     center_x = self.screen_width / 2
                 if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
                     viewing = False
-            self.screen.fill(BLACK)
+            # Draw background image (other)
+            bg = pygame.transform.smoothscale(self.bg_other, (self.screen_width, self.screen_height))
+            self.screen.blit(bg, (0, 0))
             # Title
             title = font_large.render("Leaderboard", True, GOLD)
             self.screen.blit(title, (center_x - title.get_width() / 2, 80 * scale_factor))
@@ -526,6 +561,8 @@ class GameUI:
         else:
             self.player_color = RED
             self.ai_color = YELLOW
+        # Load background image for game
+        self.bg_game = pygame.image.load(os.path.join("imgs", "bg3.jpg")).convert()
     
     def update_layout(self):
         self.screen_width = self.screen.get_width()
@@ -543,45 +580,50 @@ class GameUI:
         return x_offset, y_offset
     
     def draw_board(self, board):
-        # Clear the screen and draw the board background
-        self.screen.fill(BLACK)
-        
-        # Calculate centering offsets
+        # Draw background image (game)
+        bg = pygame.transform.smoothscale(self.bg_game, (self.screen_width, self.screen_height))
+        self.screen.blit(bg, (0, 0))
+        supersample = 4
+        surf_w = int(self.screen_width * supersample)
+        surf_h = int(self.screen_height * supersample)
+        board_surface = pygame.Surface((surf_w, surf_h))
+        board_surface.fill(BLACK)
         x_offset, y_offset = self.get_offsets()
-        
+        x_offset = int(x_offset * supersample)
+        y_offset = int(y_offset * supersample)
+        scale_factor = self.scale_factor * supersample
+        square_size = int(self.square_size * supersample)
+        radius = int(self.radius * supersample)
         # Draw the header area
-        pygame.draw.rect(self.screen, BLACK, (x_offset, y_offset, WINDOW_WIDTH * self.scale_factor, self.square_size))
-        
+        pygame.draw.rect(board_surface, BLACK, (x_offset, y_offset, int(WINDOW_WIDTH * scale_factor), square_size))
         # Draw the board slots
         for c in range(COLUMN_COUNT):
             for r in range(ROW_COUNT):
-                # Draw the blue grid
-                pygame.draw.rect(self.screen, BLUE, 
-                                (x_offset + c * self.square_size, 
-                                 y_offset + r * self.square_size + self.square_size, 
-                                 self.square_size, self.square_size))
-                
-                # Draw the empty slots
-                pygame.draw.circle(self.screen, BLACK, 
-                                  (x_offset + int(c * self.square_size + self.square_size/2), 
-                                   y_offset + int(r * self.square_size + self.square_size + self.square_size/2)), 
-                                  self.radius)
-        
-        # Draw the pieces
+                pygame.draw.rect(board_surface, BLUE,
+                                 (x_offset + c * square_size,
+                                  y_offset + r * square_size + square_size,
+                                  square_size, square_size))
+                # Draw the empty slots (antialiased)
+                cx = int(x_offset + c * square_size + square_size / 2)
+                cy = int(y_offset + r * square_size + square_size + square_size / 2)
+                pygame.gfxdraw.filled_circle(board_surface, int(cx), int(cy), int(radius), BLACK)
+                pygame.gfxdraw.aacircle(board_surface, int(cx), int(cy), int(radius), BLACK)
+        # Draw the pieces (antialiased)
         for c in range(COLUMN_COUNT):
             for r in range(ROW_COUNT):
+                cx = int(x_offset + c * square_size + square_size / 2)
+                cy = int(y_offset + WINDOW_HEIGHT * scale_factor - r * square_size - square_size / 2)
                 if board[r][c] == PLAYER_PIECE:
-                    pygame.draw.circle(self.screen, self.player_color, 
-                                      (x_offset + int(c * self.square_size + self.square_size/2), 
-                                       y_offset + int(WINDOW_HEIGHT * self.scale_factor - r * self.square_size - self.square_size/2)), 
-                                      self.radius)
+                    pygame.gfxdraw.filled_circle(board_surface, int(cx), int(cy), int(radius) + supersample, self.player_color)
+                    pygame.gfxdraw.aacircle(board_surface, int(cx), int(cy), int(radius) + supersample, self.player_color)
                 elif board[r][c] == AI_PIECE:
-                    pygame.draw.circle(self.screen, self.ai_color, 
-                                      (x_offset + int(c * self.square_size + self.square_size/2), 
-                                       y_offset + int(WINDOW_HEIGHT * self.scale_factor - r * self.square_size - self.square_size/2)), 
-                                      self.radius)
-        
-        # Draw player info
+                    pygame.gfxdraw.filled_circle(board_surface, int(cx), int(cy), int(radius) + supersample, self.ai_color)
+                    pygame.gfxdraw.aacircle(board_surface, int(cx), int(cy), int(radius) + supersample, self.ai_color)
+        # Downscale and blit to screen
+        small_surface = pygame.transform.smoothscale(board_surface, (self.screen_width, self.screen_height))
+        self.screen.blit(small_surface, (0, 0))
+        # Draw player info (not supersampled, for sharp text)
+        x_offset, y_offset = self.get_offsets()
         player_text = self.font_small.render(f"Player: {self.player_name}", True, self.player_color)
         self.screen.blit(player_text, (x_offset + 10, y_offset + 10))
     
@@ -606,7 +648,7 @@ class GameUI:
         pygame.draw.circle(self.screen, self.player_color, 
                           (x_offset + self.hover_col * self.square_size + self.square_size//2, 
                            y_offset + self.square_size//2), 
-                          self.radius)
+                          int(self.radius))
         
         pygame.display.update()
     
