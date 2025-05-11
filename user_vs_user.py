@@ -1,78 +1,50 @@
 import pygame
 import sys
-import random
+import datetime
 from board import Board
 from ui import GameUI, Button, GameMenu, BOXING_FONT_PATH
 from utils import *
-from ai import AIPlayer
-import datetime
 
-class RandomizedAIPlayer(AIPlayer):
-    def minimax(self, board, depth, alpha, beta, maximizing_player):
-        valid_locations = board.get_valid_locations()
-        is_terminal = board.is_terminal_node()
-        if depth == 0 or is_terminal:
-            if is_terminal:
-                if board.winning_move(2):
-                    return (None, 1000000)
-                elif board.winning_move(1):
-                    return (None, -1000000)
-                else:
-                    return (None, 0)
-            else:
-                return (None, board.score_position(2))
-        if maximizing_player:
-            value = -float('inf')
-            best_cols = []
-            for col in valid_locations:
-                row = board.get_next_open_row(col)
-                temp_board = board.copy()
-                temp_board.drop_piece(row, col, 2)
-                new_score = self.minimax(temp_board, depth-1, alpha, beta, False)[1]
-                if new_score > value:
-                    value = new_score
-                    best_cols = [col]
-                elif new_score == value:
-                    best_cols.append(col)
-                alpha = max(alpha, value)
-                if alpha >= beta:
-                    break
-            return (random.choice(best_cols), value)
-        else:
-            value = float('inf')
-            best_cols = []
-            for col in valid_locations:
-                row = board.get_next_open_row(col)
-                temp_board = board.copy()
-                temp_board.drop_piece(row, col, 1)
-                new_score = self.minimax(temp_board, depth-1, alpha, beta, True)[1]
-                if new_score < value:
-                    value = new_score
-                    best_cols = [col]
-                elif new_score == value:
-                    best_cols.append(col)
-                beta = min(beta, value)
-                if alpha >= beta:
-                    break
-            return (random.choice(best_cols), value)
-
-class AIVsAIGame:
+class UserVsUserGame:
     def __init__(self, screen, screen_width, screen_height):
         self.screen = screen
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.board = Board()
-        self.ui = GameUI(screen, "AI 1", "Red", screen_width, screen_height, ai_vs_ai=True)
-        self.ai1 = RandomizedAIPlayer("hard")
-        self.ai2 = RandomizedAIPlayer("hard")
-        self.ai1_score = 0
-        self.ai2_score = 0
+        self.player1_name = "Player 1"
+        self.player2_name = "Player 2"
+        self.ui = GameUI(screen, self.player1_name, "Red", screen_width, screen_height, ai_vs_ai=False)
+        self.player1_score = 0
+        self.player2_score = 0
         self.game_over = False
         self.player_moves = 0
+        self.turn = 0  # 0 for player 1, 1 for player 2
+
+    def prompt_names(self):
+        # Simple prompt for both player names using the menu UI
+        menu = GameMenu(self.screen, self.screen_width, self.screen_height)
+        # First player
+        menu.name_input = ""
+        menu.active = True
+        while True:
+            back, next_ = menu.show_name_input()
+            if next_:
+                self.player1_name = menu.name_input
+                break
+        # Second player
+        menu.name_input = ""
+        menu.active = True
+        while True:
+            back, next_ = menu.show_name_input()
+            if next_:
+                self.player2_name = menu.name_input
+                break
+        # Update UI with player 1's name
+        self.ui.player_name = self.player1_name
 
     def load_leaderboard(self):
         try:
-            with open("ai_vs_ai_leaderboard.txt", "r") as file:
+            with open("user_vs_user_leaderboard.txt", "r") as file:
                 leaderboard = []
                 for line in file:
                     leaderboard.append(line.strip())
@@ -81,7 +53,7 @@ class AIVsAIGame:
             return []
 
     def save_leaderboard(self, leaderboard):
-        with open("ai_vs_ai_leaderboard.txt", "w") as file:
+        with open("user_vs_user_leaderboard.txt", "w") as file:
             for entry in leaderboard:
                 file.write(f"{entry}\n")
 
@@ -98,7 +70,6 @@ class AIVsAIGame:
 
     def show_leaderboard(self):
         leaderboard = self.load_leaderboard()
-        # Display like the user leaderboard, but with AI names and scores
         pygame.event.clear()
         viewing = True
         scale_factor = min(self.screen_width / WINDOW_WIDTH, self.screen_height / WINDOW_HEIGHT)
@@ -138,32 +109,26 @@ class AIVsAIGame:
                             scroll_offset += 1
                     if event.button == 1 or event.button == 3:
                         viewing = False
-            # Draw background image (other) with aspect ratio preserved
             self.ui.blit_centered_bg(self.ui.bg_game, self.screen)
-            # Draw semi-transparent overlay over the entire screen
             overlay_surface = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
             overlay_surface.fill((0, 0, 0, 180))
             self.screen.blit(overlay_surface, (0, 0))
-            # Title
-            title = font_large.render("AI vs AI Leaderboard", True, GOLD)
+            title = font_large.render("User vs User Leaderboard", True, GOLD)
             self.screen.blit(title, (center_x - title.get_width() / 2, 80 * scale_factor))
-            # Entries (with scroll)
             y_start = 180 * scale_factor
             line_height = 40 * scale_factor
             if not leaderboard:
-                no_scores = font.render("No AI vs AI games yet!", True, WHITE)
+                no_scores = font.render("No user vs user games yet!", True, WHITE)
                 self.screen.blit(no_scores, (center_x - no_scores.get_width() / 2, y_start))
             else:
                 for i, entry in enumerate(leaderboard[scroll_offset:scroll_offset+max_visible]):
                     color = GOLD if i+scroll_offset == 0 else SILVER if i+scroll_offset == 1 else BRONZE if i+scroll_offset == 2 else WHITE
                     entry_text = font.render(entry, True, color)
                     self.screen.blit(entry_text, (center_x - entry_text.get_width() / 2, y_start + i * line_height))
-            # Scroll instructions
             if len(leaderboard) > max_visible:
                 small_font = pygame.font.Font(BOXING_FONT_PATH, int(20 * scale_factor))
                 scroll_text = small_font.render("Scroll to see more", True, LIGHT_GREY)
                 self.screen.blit(scroll_text, (center_x - scroll_text.get_width() / 2, self.screen_height - 80 * scale_factor))
-            # Back instruction
             small_font = pygame.font.Font(BOXING_FONT_PATH, int(20 * scale_factor))
             back_text = small_font.render("Press any key to return", True, LIGHT_GREY)
             self.screen.blit(back_text, (center_x - back_text.get_width() / 2, self.screen_height - 40 * scale_factor))
@@ -171,7 +136,9 @@ class AIVsAIGame:
 
     def run(self):
         from ui import Button
-        started = False
+        self.prompt_names()
+        self.ui.player_name = self.player1_name
+        started = True
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -185,100 +152,58 @@ class AIVsAIGame:
                     self.ui.screen_width = event.w
                     self.ui.screen_height = event.h
                     self.ui.update_layout()
-            if not started:
-                # Show a 'Start Game' button in the center
-                button_width = 300
-                button_height = 80
-                screen_width = self.screen.get_width()
-                screen_height = self.screen.get_height()
-                center_x = screen_width // 2
-                center_y = screen_height // 2
-                start_button = Button(self.screen, "Start Game", center_x - button_width//2, center_y - button_height//2, button_width, button_height, (255, 230, 80), (255, 255, 180), BLACK, BLACK, BLACK)
-                waiting = True
-                while waiting:
-                    for event in pygame.event.get():
-                        if event.type == pygame.QUIT:
-                            pygame.quit()
-                            sys.exit()
-                        if event.type == pygame.VIDEORESIZE:
-                            self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
-                            self.screen_width = event.w
-                            self.screen_height = event.h
-                            self.ui.screen = self.screen
-                            self.ui.screen_width = event.w
-                            self.ui.screen_height = event.h
-                            self.ui.update_layout()
-                            screen_width = self.screen.get_width()
-                            screen_height = self.screen.get_height()
-                            center_x = screen_width // 2
-                            center_y = screen_height // 2
-                            start_button.rect.x = center_x - button_width//2
-                            start_button.rect.y = center_y - button_height//2
-                        start_button.check_hover(pygame.mouse.get_pos())
-                        if start_button.is_clicked(pygame.mouse.get_pos(), event):
-                            waiting = False
-                            started = True
-                    self.ui.draw_board(self.board.board)
-                    self.ui.draw_score((self.ai1_score, self.ai2_score))
-                    start_button.draw()
-                    pygame.display.update()
-                continue
-            if not self.game_over:
-                # AI 1 (PLAYER_PIECE)
-                col1 = self.ai1.get_move(self.board)
-                if col1 is not None and self.board.is_valid_location(col1):
-                    row1 = self.board.get_next_open_row(col1)
-                    self.board.drop_piece(row1, col1, PLAYER_PIECE)
-                    self.player_moves += 1
-                    if self.board.winning_move(PLAYER_PIECE):
-                        self.ai1_score = max(1000 - 20 * self.player_moves, 100)
-                        self.ai2_score = 0
-                        self.ui.show_winner("AI 1")
-                        self.game_over = True
-                        continue
-                    elif len(self.board.get_valid_locations()) == 0:
-                        self.ai1_score = 50
-                        self.ai2_score = 50
-                        self.ui.show_winner("Draw")
-                        self.game_over = True
-                        continue
-                pygame.display.update()
-                pygame.time.wait(1200)
-                # AI 2 (AI_PIECE)
-                if not self.game_over:
-                    col2 = self.ai2.get_move(self.board)
-                    if col2 is not None and self.board.is_valid_location(col2):
-                        row2 = self.board.get_next_open_row(col2)
-                        self.board.drop_piece(row2, col2, AI_PIECE)
-                        if self.board.winning_move(AI_PIECE):
-                            self.ai1_score = 0
-                            self.ai2_score = max(1000 - 20 * self.player_moves, 100)
-                            self.ui.show_winner("AI 2")
-                            self.game_over = True
-                            continue
-                        elif len(self.board.get_valid_locations()) == 0:
-                            self.ai1_score = 50
-                            self.ai2_score = 50
-                            self.ui.show_winner("Draw")
-                            self.game_over = True
-                            continue
-                    pygame.display.update()
-                    pygame.time.wait(1200)
+                if self.game_over:
+                    continue
+                if event.type == pygame.MOUSEMOTION:
+                    self.ui.update_hover(event.pos[0])
+                if event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
+                    self.ui.update_layout()
+                    x_offset, y_offset = self.ui.get_offsets()
+                    board_width = self.ui.square_size * COLUMN_COUNT
+                    board_height = self.ui.square_size * (ROW_COUNT + 1)
+                    if (x_offset <= event.pos[0] <= x_offset + board_width and
+                        y_offset + self.ui.square_size <= event.pos[1] <= y_offset + board_height):
+                        adjusted_x_pos = event.pos[0] - x_offset
+                        col = int(adjusted_x_pos // self.ui.square_size)
+                        col = max(0, min(COLUMN_COUNT - 1, col))
+                        if self.board.is_valid_location(col):
+                            row = self.board.get_next_open_row(col)
+                            piece = PLAYER_PIECE if self.turn == 0 else AI_PIECE
+                            self.board.drop_piece(row, col, piece)
+                            self.player_moves += 1
+                            if self.board.winning_move(piece):
+                                if self.turn == 0:
+                                    self.player1_score = max(1000 - 20 * self.player_moves, 100)
+                                    self.player2_score = 0
+                                else:
+                                    self.player1_score = 0
+                                    self.player2_score = max(1000 - 20 * self.player_moves, 100)
+                                self.game_over = True
+                                self.ui.show_winner(self.player1_name if self.turn == 0 else self.player2_name)
+                                continue
+                            elif len(self.board.get_valid_locations()) == 0:
+                                self.player1_score = 50
+                                self.player2_score = 50
+                                self.game_over = True
+                                self.ui.show_winner("Draw")
+                                continue
+                            self.turn = 1 - self.turn
+                            self.ui.player_name = self.player1_name if self.turn == 0 else self.player2_name
             self.ui.draw_board(self.board.board)
-            self.ui.draw_score((self.ai1_score, self.ai2_score))
+            self.ui.draw_score((self.player1_score, self.player2_score))
             if self.game_over:
-                # Log result to AI vs AI leaderboard with timestamp, move count, and winner
+                # Log result to leaderboard with timestamp, move count, and winner
                 now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
                 total_moves = sum(1 for row in self.board.board.flatten() if row != 0)
-                if self.board.winning_move(PLAYER_PIECE):
-                    winner = "AI 1"
-                    result_entry = f"[{now}] Winner: AI 1 | Moves: {total_moves} | AI 1: {self.ai1_score}, AI 2: {self.ai2_score}"
-                elif self.board.winning_move(AI_PIECE):
-                    winner = "AI 2"
-                    result_entry = f"[{now}] Winner: AI 2 | Moves: {total_moves} | AI 2: {self.ai2_score}, AI 1: {self.ai1_score}"
+                if self.player1_score > self.player2_score:
+                    winner = self.player1_name
+                    result_entry = f"[{now}] Winner: {self.player1_name} | Moves: {total_moves} | {self.player1_name}: {self.player1_score}, {self.player2_name}: {self.player2_score}"
+                elif self.player2_score > self.player1_score:
+                    winner = self.player2_name
+                    result_entry = f"[{now}] Winner: {self.player2_name} | Moves: {total_moves} | {self.player2_name}: {self.player2_score}, {self.player1_name}: {self.player1_score}"
                 else:
                     winner = "Draw"
-                    result_entry = f"[{now}] Winner: Draw | Moves: {total_moves} | Draw: {self.ai1_score}, {self.ai2_score}"
+                    result_entry = f"[{now}] Winner: Draw | Moves: {total_moves} | Draw: {self.player1_score}, {self.player2_score}"
                 self.update_leaderboard(result_entry)
                 pygame.time.wait(1000)
                 # Show buttons: View Leaderboard, Back to Menu
@@ -322,18 +247,17 @@ class AIVsAIGame:
                             waiting = False
                     self.screen.fill(BLACK)
                     self.ui.draw_board(self.board.board)
-                    self.ui.draw_score((self.ai1_score, self.ai2_score))
-                    # Draw semi-transparent overlay over the entire screen
+                    self.ui.draw_score((self.player1_score, self.player2_score))
                     overlay_surface = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
                     overlay_surface.fill((0, 0, 0, 180))
                     self.screen.blit(overlay_surface, (0, 0))
                     from ui import BOXING_FONT_PATH
                     font = pygame.font.Font(BOXING_FONT_PATH, 48)
-                    if self.board.winning_move(PLAYER_PIECE):
-                        msg = "AI 1 wins!"
+                    if self.player1_score > self.player2_score:
+                        msg = f"{self.player1_name} wins!"
                         color = self.ui.player_color
-                    elif self.board.winning_move(AI_PIECE):
-                        msg = "AI 2 wins!"
+                    elif self.player2_score > self.player1_score:
+                        msg = f"{self.player2_name} wins!"
                         color = self.ui.ai_color
                     else:
                         msg = "game is a Draw!"
@@ -348,5 +272,4 @@ class AIVsAIGame:
                 # Return to menu
                 current_w, current_h = self.screen.get_size()
                 menu = GameMenu(self.screen, current_w, current_h)
-                player_name, difficulty, sprite = menu.show()
-                return (player_name, difficulty, sprite) 
+                return menu.show() 
