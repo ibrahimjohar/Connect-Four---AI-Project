@@ -168,18 +168,26 @@ class DifficultySelector:
     def update_layout(self):
         self.screen_width = self.screen.get_width()
         self.screen_height = self.screen.get_height()
-        self.center_x = self.screen_width // 2
-        self.x = self.center_x - self.width // 2
+        self.center_x = self.screen_width / 2
+        # Responsive button size
+        self.width = int(self.screen_width * 0.22)
+        self.height = int(self.screen_height * 0.07)
+        self.x = self.center_x - self.width / 2
     
-    def draw(self):
+    def draw(self, y_start):
         self.update_layout()
+        button_height = self.height
+        spacing = int(self.screen_height * 0.03)
+        y = y_start
         for i, button in enumerate(self.buttons):
-            button.rect.x = self.x + i * (self.width // 3)
-            button.rect.y = self.y
-            # Make selected button stand out
+            button.rect.width = self.width
+            button.rect.height = button_height
+            button.rect.x = self.center_x - button.rect.width / 2
+            button.rect.y = y
             if i == self.selected:
                 pygame.draw.rect(self.screen, WHITE, (button.rect.x - 2, button.rect.y - 2, button.rect.width + 4, button.rect.height + 4), 2)
             button.draw()
+            y += button_height + spacing
     
     def handle_event(self, event, mouse_pos):
         for i, button in enumerate(self.buttons):
@@ -215,13 +223,37 @@ class GameMenu:
     def show(self):
         # 1. Title screen
         self.show_title_screen()
-        # 2. Name input
-        player_name = self.show_name_input()
-        # 3. Piece selection
-        sprite = self.show_piece_selection()
-        # 4. Difficulty selection
-        difficulty = self.show_difficulty_selection()
-        return (player_name, difficulty, sprite)
+        while True:
+            # 2. Name input
+            back, next_ = self.show_name_input()
+            if back:
+                self.show_title_screen()
+                continue
+            if not next_:
+                continue
+            # 3. Piece selection
+            sprite, back, next_ = self.show_piece_selection()
+            if back:
+                continue  # Go back to name input
+            if not next_:
+                continue
+            # 4. Difficulty selection
+            difficulty, back, next_ = self.show_difficulty_selection()
+            if back:
+                # Go back to piece selection
+                while True:
+                    sprite, back2, next2 = self.show_piece_selection()
+                    if back2:
+                        break  # Go back to name input
+                    if next2:
+                        break  # Proceed to difficulty selection
+                if back2:
+                    continue  # Go back to name input
+                # Now show difficulty again
+                continue
+            if not next_:
+                continue
+            return (self.name_input, difficulty, sprite)
 
     def show_title_screen(self):
         waiting = True
@@ -246,6 +278,13 @@ class GameMenu:
         name_input = ""
         active_input = True
         while True:
+            center_x = self.screen_width / 2
+            center_y = self.screen_height / 2
+            button_width = 80 * self.scale_factor
+            button_height = 32 * self.scale_factor
+            spacing = 20 * self.scale_factor
+            back_button = Button(self.screen, "Back", center_x - button_width - spacing/2, center_y + 60 * self.scale_factor, button_width, button_height, LIGHT_GREY, WHITE)
+            next_button = Button(self.screen, "Next", center_x + spacing/2, center_y + 60 * self.scale_factor, button_width, button_height, GREEN, (100, 255, 100))
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -253,16 +292,22 @@ class GameMenu:
                 if event.type == pygame.VIDEORESIZE:
                     self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
                     self.handle_resize(event.w, event.h)
+                if back_button.is_clicked(pygame.mouse.get_pos(), event):
+                    return True, False  # Go back
+                if next_button.is_clicked(pygame.mouse.get_pos(), event) and name_input.strip():
+                    self.name_input = name_input
+                    return False, True
                 if active_input and event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN and name_input.strip():
-                        return name_input
+                        self.name_input = name_input
+                        return False, True
                     elif event.key == pygame.K_BACKSPACE:
                         name_input = name_input[:-1]
                     elif len(name_input) < 20:
                         name_input += event.unicode
             self.screen.fill(BLACK)
-            center_x = self.screen_width / 2
-            center_y = self.screen_height / 2
+            back_button.check_hover(pygame.mouse.get_pos())
+            next_button.check_hover(pygame.mouse.get_pos())
             prompt = self.font.render("Enter your name:", True, WHITE)
             self.screen.blit(prompt, (center_x - prompt.get_width() / 2, center_y - 80 * self.scale_factor))
             input_rect = pygame.Rect(center_x - 150 * self.scale_factor, center_y - 20 * self.scale_factor, 300 * self.scale_factor, 40 * self.scale_factor)
@@ -273,12 +318,28 @@ class GameMenu:
             if active_input and pygame.time.get_ticks() % 1000 < 500:
                 cursor_pos = self.font.size(name_input)[0]
                 pygame.draw.line(self.screen, BLACK, (center_x - 145 * self.scale_factor + cursor_pos, center_y - 15 * self.scale_factor), (center_x - 145 * self.scale_factor + cursor_pos, center_y - 15 * self.scale_factor + 30 * self.scale_factor), 2)
+            back_button.draw()
+            # Next button is only enabled if name is not empty
+            if name_input.strip():
+                next_button.draw()
+            else:
+                # Draw disabled next button
+                pygame.draw.rect(self.screen, (180, 220, 180), next_button.rect)
+                pygame.draw.rect(self.screen, WHITE, next_button.rect, 2)
+                text_surf = next_button.font.render(next_button.text, True, (100, 100, 100))
+                text_rect = text_surf.get_rect(center=next_button.rect.center)
+                self.screen.blit(text_surf, text_rect)
             pygame.display.update()
 
     def show_piece_selection(self):
         sprite_selector = SpriteSelector(self.screen, 0, 0)
         center_x = self.screen_width / 2
         center_y = self.screen_height / 2
+        button_width = 80 * self.scale_factor
+        button_height = 32 * self.scale_factor
+        spacing = 20 * self.scale_factor
+        back_button = Button(self.screen, "Back", center_x - button_width - spacing/2, center_y + 100 * self.scale_factor, button_width, button_height, LIGHT_GREY, WHITE)
+        next_button = Button(self.screen, "Next", center_x + spacing/2, center_y + 100 * self.scale_factor, button_width, button_height, GREEN, (100, 255, 100))
         while True:
             mouse_pos = pygame.mouse.get_pos()
             for event in pygame.event.get():
@@ -291,27 +352,80 @@ class GameMenu:
                     center_x = self.screen_width / 2
                     center_y = self.screen_height / 2
                     sprite_selector.update_layout()
+                if back_button.is_clicked(mouse_pos, event):
+                    return None, True, False  # Go back
+                if next_button.is_clicked(mouse_pos, event):
+                    return sprite_selector.get_selected_sprite(), False, True
                 sprite_selector.handle_event(event, mouse_pos)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                    return sprite_selector.get_selected_sprite()
+                    return sprite_selector.get_selected_sprite(), False, True
                 if event.type == pygame.MOUSEBUTTONDOWN and sprite_selector.left_button.is_hovered or sprite_selector.right_button.is_hovered:
                     continue
             self.screen.fill(BLACK)
+            back_button.check_hover(mouse_pos)
+            next_button.check_hover(mouse_pos)
             prompt = self.font.render("Choose your piece:", True, WHITE)
             self.screen.blit(prompt, (center_x - prompt.get_width() / 2, center_y - 80 * self.scale_factor))
-            # Center the sprite selector
             sprite_selector.y = center_y - 20
             sprite_selector.draw()
+            back_button.draw()
+            next_button.draw()
             confirm_text = self.font.render("Press Enter to confirm", True, LIGHT_GREY)
-            self.screen.blit(confirm_text, (center_x - confirm_text.get_width() / 2, center_y + 80 * self.scale_factor))
+            self.screen.blit(confirm_text, (center_x - confirm_text.get_width() / 2, center_y + 140 * self.scale_factor))
             pygame.display.update()
 
     def show_difficulty_selection(self):
         difficulty_selector = DifficultySelector(self.screen, 0, 0)
-        center_x = self.screen_width / 2
-        center_y = self.screen_height / 2
         while True:
+            self.screen.fill(BLACK)
+            center_x = self.screen_width / 2
+            center_y = self.screen_height / 2
+            scale_factor = self.scale_factor
+            # Responsive sizes
+            button_width = int(self.screen_width * 0.22)
+            button_height = int(self.screen_height * 0.07)
+            spacing = int(self.screen_height * 0.03)
+            nav_spacing = int(self.screen_height * 0.04)
+            nav_button_height = int(self.screen_height * 0.06)
+            nav_button_width = int(self.screen_width * 0.13)
+            # Prompt text
+            prompt = self.font.render("Select difficulty:", True, WHITE)
+            prompt_height = prompt.get_height()
+            # Confirm text
+            confirm_text = self.font.render("Press Enter to confirm", True, LIGHT_GREY)
+            confirm_height = confirm_text.get_height()
+            # Total height of all elements
+            total_height = (
+                prompt_height + spacing +
+                len(difficulty_selector.buttons) * button_height + (len(difficulty_selector.buttons) - 1) * spacing +
+                nav_spacing + nav_button_height +
+                nav_spacing + confirm_height
+            )
+            start_y = (self.screen_height - total_height) / 2
+            # Draw prompt
+            self.screen.blit(prompt, (center_x - prompt.get_width() / 2, start_y))
+            # Draw difficulty buttons
+            buttons_y = start_y + prompt_height + spacing
+            difficulty_selector.draw(buttons_y)
+            # Draw nav buttons
+            nav_y = buttons_y + len(difficulty_selector.buttons) * button_height + (len(difficulty_selector.buttons) - 1) * spacing + nav_spacing
+            back_button = Button(self.screen, "Back", center_x - nav_button_width - 10, nav_y, nav_button_width, nav_button_height, LIGHT_GREY, WHITE)
+            next_button = Button(self.screen, "Next", center_x + 10, nav_y, nav_button_width, nav_button_height, GREEN, (100, 255, 100))
             mouse_pos = pygame.mouse.get_pos()
+            back_button.check_hover(mouse_pos)
+            next_button.check_hover(mouse_pos)
+            back_button.draw()
+            # Next button is only enabled if a difficulty is selected
+            if difficulty_selector.selected is not None:
+                next_button.draw()
+            else:
+                pygame.draw.rect(self.screen, (180, 220, 180), next_button.rect)
+                pygame.draw.rect(self.screen, WHITE, next_button.rect, 2)
+                text_surf = next_button.font.render(next_button.text, True, (100, 100, 100))
+                text_rect = text_surf.get_rect(center=next_button.rect.center)
+                self.screen.blit(text_surf, text_rect)
+            # Draw confirm text
+            self.screen.blit(confirm_text, (center_x - confirm_text.get_width() / 2, nav_y + nav_button_height + nav_spacing))
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -322,17 +436,13 @@ class GameMenu:
                     center_x = self.screen_width / 2
                     center_y = self.screen_height / 2
                     difficulty_selector.update_layout()
+                if back_button.is_clicked(mouse_pos, event):
+                    return None, True, False  # Go back
+                if next_button.is_clicked(mouse_pos, event) and difficulty_selector.selected is not None:
+                    return difficulty_selector.get_selected_difficulty(), False, True
                 difficulty_selector.handle_event(event, mouse_pos)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and difficulty_selector.selected is not None:
-                    return difficulty_selector.get_selected_difficulty()
-            self.screen.fill(BLACK)
-            prompt = self.font.render("Select difficulty:", True, WHITE)
-            self.screen.blit(prompt, (center_x - prompt.get_width() / 2, center_y - 80 * self.scale_factor))
-            # Center the difficulty selector
-            difficulty_selector.y = center_y - 20
-            difficulty_selector.draw()
-            confirm_text = self.font.render("Press Enter to confirm", True, LIGHT_GREY)
-            self.screen.blit(confirm_text, (center_x - confirm_text.get_width() / 2, center_y + 80 * self.scale_factor))
+                    return difficulty_selector.get_selected_difficulty(), False, True
             pygame.display.update()
 
     def show_leaderboard(self):
