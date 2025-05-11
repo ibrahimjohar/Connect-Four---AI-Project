@@ -7,7 +7,7 @@ from utils import WINDOW_WIDTH, WINDOW_HEIGHT, FPS
 def main():
     pygame.init()
     clock = pygame.time.Clock()
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE)
+    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption("Connect 4")
     
     # Start with loading screen

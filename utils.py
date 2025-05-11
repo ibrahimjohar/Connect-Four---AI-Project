@@ -34,3 +34,8 @@ AI = 1
 
 # Window lengths for evaluating game state
 WINDOW_LENGTH = 4
+
+HEADER_HEIGHT = 30
+
+# Base square size (will be scaled in GameUI)
+BASE_SQUARESIZE = 100
