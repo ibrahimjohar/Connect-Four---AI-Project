@@ -206,9 +206,7 @@ class Game:
                             self.ui.screen = self.screen
                             self.ui.screen_width = event.w
                             self.ui.screen_height = event.h
-                            self.ui.scale_factor = min(event.w / WINDOW_WIDTH, event.h / WINDOW_HEIGHT)
-                            self.ui.square_size = int(SQUARESIZE * self.ui.scale_factor)
-                            self.ui.radius = int(RADIUS * self.ui.scale_factor)
+                            self.ui.update_layout()
                             screen_width = self.screen.get_width()
                             screen_height = self.screen.get_height()
                             center_x = screen_width // 2
@@ -220,7 +218,8 @@ class Game:
                         leaderboard_button.check_hover(pygame.mouse.get_pos())
                         menu_button.check_hover(pygame.mouse.get_pos())
                         if leaderboard_button.is_clicked(pygame.mouse.get_pos(), event):
-                            menu = GameMenu(self.screen, self.screen_width, self.screen_height)
+                            current_w, current_h = self.screen.get_size()
+                            menu = GameMenu(self.screen, current_w, current_h)
                             menu.show_leaderboard()
                             pygame.event.clear()  # Clear events after returning from leaderboard
                             continue  # Continue the button loop, don't exit
@@ -233,7 +232,8 @@ class Game:
                     menu_button.draw()
                     pygame.display.update()
                 # Return to menu
-                menu = GameMenu(self.screen, self.screen_width, self.screen_height)
+                current_w, current_h = self.screen.get_size()
+                menu = GameMenu(self.screen, current_w, current_h)
                 player_name, difficulty, sprite = menu.show()
                 self.__init__(self.screen, player_name, difficulty, sprite)
             pygame.display.update()
