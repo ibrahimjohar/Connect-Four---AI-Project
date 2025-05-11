@@ -228,6 +228,28 @@ class Game:
                     self.screen.fill(BLACK)
                     self.ui.draw_board(self.board.board)
                     self.ui.draw_score(self.score)
+                    # Draw semi-transparent overlay over the entire screen
+                    overlay_surface = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+                    overlay_surface.fill((0, 0, 0, 180))
+                    self.screen.blit(overlay_surface, (0, 0))
+                    # Draw the victory/loss message centered above the buttons
+                    from ui import BOXING_FONT_PATH
+                    font = pygame.font.Font(BOXING_FONT_PATH, 48)
+                    if self.board.winning_move(PLAYER_PIECE):
+                        msg = f"{self.player_name} wins!"
+                        color = self.ui.player_color
+                    elif self.board.winning_move(AI_PIECE):
+                        msg = "AI wins!"
+                        color = self.ui.ai_color
+                    else:
+                        msg = "game is a Draw!"
+                        color = (255, 255, 255)
+                    label = font.render(msg, True, color)
+                    # Center the label horizontally, and place it above the buttons
+                    label_x = center_x - label.get_width() // 2
+                    label_y = center_y - button_height - label.get_height() - 30
+                    self.screen.blit(label, (label_x, label_y))
+                    # Draw the buttons below the message
                     leaderboard_button.draw()
                     menu_button.draw()
                     pygame.display.update()
