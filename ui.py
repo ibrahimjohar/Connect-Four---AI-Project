@@ -49,21 +49,26 @@ class LoadingScreen:
             time.sleep(0.01)
 
 class Button:
-    def __init__(self, screen, text, x, y, width, height, color, hover_color):
+    def __init__(self, screen, text, x, y, width, height, color, hover_color, text_color=BLACK, hover_text_color=WHITE, border_color=BLACK, hover_border_color=BLACK):
         self.screen = screen
         self.text = text
         self.rect = pygame.Rect(x, y, width, height)
         self.color = color
         self.hover_color = hover_color
+        self.text_color = text_color
+        self.hover_text_color = hover_text_color
+        self.border_color = border_color
+        self.hover_border_color = hover_border_color
         self.font = pygame.font.Font(BOXING_FONT_PATH, 24)
         self.is_hovered = False
     
     def draw(self):
         color = self.hover_color if self.is_hovered else self.color
+        text_color = self.hover_text_color if self.is_hovered else self.text_color
+        border_color = self.hover_border_color if self.is_hovered else self.border_color
         pygame.draw.rect(self.screen, color, self.rect)
-        pygame.draw.rect(self.screen, WHITE, self.rect, 2)  # Border
-        
-        text_surf = self.font.render(self.text, True, BLACK)
+        pygame.draw.rect(self.screen, border_color, self.rect, 2)
+        text_surf = self.font.render(self.text, True, text_color)
         text_rect = text_surf.get_rect(center=self.rect.center)
         self.screen.blit(text_surf, text_rect)
     
@@ -172,12 +177,13 @@ class DifficultySelector:
         
         button_width = self.width // 3
         for i, diff in enumerate(self.difficulties):
-            color = GREEN if diff == "easy" else YELLOW if diff == "medium" else RED
-            hover_color = (min(color[0] + 50, 255), min(color[1] + 50, 255), min(color[2] + 50, 255))
+            # All yellow/black scheme
+            color = (255, 230, 80)
+            hover_color = (255, 255, 180)
             self.buttons.append(Button(screen, diff.capitalize(), 
                                       x + i * button_width, y, 
                                       button_width, self.height, 
-                                      color, hover_color))
+                                      color, hover_color, BLACK, BLACK, BLACK))
         
         self.selected = None  # Default to easy
     
@@ -201,7 +207,7 @@ class DifficultySelector:
             button.rect.x = self.center_x - button.rect.width / 2
             button.rect.y = y
             if i == self.selected:
-                pygame.draw.rect(self.screen, WHITE, (button.rect.x - 2, button.rect.y - 2, button.rect.width + 4, button.rect.height + 4), 2)
+                pygame.draw.rect(self.screen, BLACK, (button.rect.x - 2, button.rect.y - 2, button.rect.width + 4, button.rect.height + 4), 2)
             button.draw()
             y += button_height + spacing
     
@@ -298,23 +304,28 @@ class GameMenu:
                 if event.type == pygame.VIDEORESIZE:
                     self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
                     self.handle_resize(event.w, event.h)
-                if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                if event.type in [pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN]:
                     waiting = False
             # Draw background image (title)
             bg = pygame.transform.smoothscale(self.bg_title, (self.screen_width, self.screen_height))
             self.screen.blit(bg, (0, 0))
             center_x = self.screen_width / 2
             center_y = self.screen_height / 2
-            # Use #FFFFE3 for the title color
             title = self.font_large.render("connect 4our", True, TITLE_YELLOW)
             self.screen.blit(title, (center_x - title.get_width() / 2, center_y - title.get_height() / 2))
-            # Add subtitle below the title
+            # Subtitle
             subtitle_font = pygame.font.Font(BOXING_FONT_PATH, int(self.font_large.get_height() * 0.20))
             subtitle_text = "powered by minimax alpha-beta pruning AI algorithm."
             subtitle_surface = subtitle_font.render(subtitle_text, True, WHITE)
             subtitle_y = center_y + title.get_height() / 2 + 10
             self.screen.blit(subtitle_surface, (center_x - subtitle_surface.get_width() / 2, subtitle_y))
-            # Add credits at the bottom
+            # Move 'click anywhere to start' even further down
+            click_font = pygame.font.Font(BOXING_FONT_PATH, int(self.font_large.get_height() * 0.18))
+            click_text = "click anywhere to start"
+            click_surface = click_font.render(click_text, True, WHITE)
+            click_y = subtitle_y + subtitle_surface.get_height() + 80  # Increased gap further
+            self.screen.blit(click_surface, (center_x - click_surface.get_width() / 2, click_y))
+            # Credits
             credits_font = pygame.font.Font(BOXING_FONT_PATH, int(self.font_large.get_height() * 0.15))
             credits_text = "developed by: ibrahim - areeba - emman - amna"
             credits_surface = credits_font.render(credits_text, True, WHITE)
@@ -331,8 +342,9 @@ class GameMenu:
             button_width = 80 * self.scale_factor
             button_height = 32 * self.scale_factor
             spacing = 20 * self.scale_factor
-            back_button = Button(self.screen, "Back", center_x - button_width - spacing/2, center_y + 60 * self.scale_factor, button_width, button_height, LIGHT_GREY, WHITE)
-            next_button = Button(self.screen, "Next", center_x + spacing/2, center_y + 60 * self.scale_factor, button_width, button_height, GREEN, (100, 255, 100))
+            back_button = Button(self.screen, "Back", center_x - button_width - spacing/2, center_y + 60 * self.scale_factor, button_width, button_height, BLACK, WHITE, WHITE, BLACK, WHITE, BLACK)
+            # Next button: yellow/black with black border
+            next_button = Button(self.screen, "Next", center_x + spacing/2, center_y + 60 * self.scale_factor, button_width, button_height, (255, 230, 80), (255, 255, 180), BLACK, BLACK, BLACK)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -351,30 +363,36 @@ class GameMenu:
                         return False, True
                     elif event.key == pygame.K_BACKSPACE:
                         name_input = name_input[:-1]
-                    elif len(name_input) < 20:
-                        name_input += event.unicode
+                    else:
+                        # Restrict input so text fits in box
+                        input_font = pygame.font.Font(BOXING_FONT_PATH, int(28 * self.scale_factor))
+                        test_surface = input_font.render(name_input + event.unicode, True, BLACK)
+                        if test_surface.get_width() < 300 * self.scale_factor - 10 and len(name_input) < 20:
+                            name_input += event.unicode
             # Draw background image (other) with aspect ratio preserved
             self.blit_centered_bg(self.bg_other, self.screen)
             back_button.check_hover(pygame.mouse.get_pos())
             next_button.check_hover(pygame.mouse.get_pos())
-            prompt = self.font.render("Enter your name:", True, WHITE)
+            prompt = self.font.render("enter your name:", True, WHITE)
             self.screen.blit(prompt, (center_x - prompt.get_width() / 2, center_y - 80 * self.scale_factor))
             input_rect = pygame.Rect(center_x - 150 * self.scale_factor, center_y - 20 * self.scale_factor, 300 * self.scale_factor, 40 * self.scale_factor)
             pygame.draw.rect(self.screen, WHITE if active_input else LIGHT_GREY, input_rect)
             pygame.draw.rect(self.screen, BLACK, input_rect, 2)
-            name_surface = self.font.render(name_input, True, BLACK)
+            # Smaller font for input
+            input_font = pygame.font.Font(BOXING_FONT_PATH, int(28 * self.scale_factor))
+            name_surface = input_font.render(name_input, True, BLACK)
             self.screen.blit(name_surface, (center_x - 145 * self.scale_factor, center_y - 15 * self.scale_factor))
             if active_input and pygame.time.get_ticks() % 1000 < 500:
-                cursor_pos = self.font.size(name_input)[0]
+                cursor_pos = input_font.size(name_input)[0]
                 pygame.draw.line(self.screen, BLACK, (center_x - 145 * self.scale_factor + cursor_pos, center_y - 15 * self.scale_factor), (center_x - 145 * self.scale_factor + cursor_pos, center_y - 15 * self.scale_factor + 30 * self.scale_factor), 2)
             back_button.draw()
             # Next button is only enabled if name is not empty
             if name_input.strip():
                 next_button.draw()
             else:
-                # Draw disabled next button
-                pygame.draw.rect(self.screen, (180, 220, 180), next_button.rect)
-                pygame.draw.rect(self.screen, WHITE, next_button.rect, 2)
+                # Draw disabled next button (grey bg, grey text)
+                pygame.draw.rect(self.screen, (180, 180, 180), next_button.rect)
+                pygame.draw.rect(self.screen, BLACK, next_button.rect, 2)
                 text_surf = next_button.font.render(next_button.text, True, (100, 100, 100))
                 text_rect = text_surf.get_rect(center=next_button.rect.center)
                 self.screen.blit(text_surf, text_rect)
@@ -387,8 +405,9 @@ class GameMenu:
         button_width = 80 * self.scale_factor
         button_height = 32 * self.scale_factor
         spacing = 20 * self.scale_factor
-        back_button = Button(self.screen, "Back", center_x - button_width - spacing/2, center_y + 100 * self.scale_factor, button_width, button_height, LIGHT_GREY, WHITE)
-        next_button = Button(self.screen, "Next", center_x + spacing/2, center_y + 100 * self.scale_factor, button_width, button_height, GREEN, (100, 255, 100))
+        back_button = Button(self.screen, "Back", center_x - button_width - spacing/2, center_y + 100 * self.scale_factor, button_width, button_height, BLACK, WHITE, WHITE, BLACK, WHITE, BLACK)
+        # Next button: yellow/black with black border
+        next_button = Button(self.screen, "Next", center_x + spacing/2, center_y + 100 * self.scale_factor, button_width, button_height, (255, 230, 80), (255, 255, 180), BLACK, BLACK, BLACK)
         while True:
             mouse_pos = pygame.mouse.get_pos()
             for event in pygame.event.get():
@@ -412,16 +431,35 @@ class GameMenu:
                     continue
             # Draw background image (other) with aspect ratio preserved
             self.blit_centered_bg(self.bg_other, self.screen)
-            back_button.check_hover(mouse_pos)
-            next_button.check_hover(mouse_pos)
-            prompt = self.font.render("choose your piece:", True, WHITE)
-            self.screen.blit(prompt, (center_x - prompt.get_width() / 2, center_y - 80 * self.scale_factor))
-            sprite_selector.y = center_y - 20
+            # Calculate vertical layout
+            prompt_font = self.font
+            prompt = prompt_font.render("choose your piece:", True, WHITE)
+            selector_box_height = sprite_selector.height
+            confirm_font = pygame.font.Font(BOXING_FONT_PATH, int(18 * self.scale_factor))
+            confirm_text = confirm_font.render("press enter to confirm", True, LIGHT_GREY)
+            total_height = (prompt.get_height() + 20 + selector_box_height + 40 + button_height + 20 + confirm_text.get_height())
+            start_y = (self.screen_height - total_height) / 2
+            # Draw prompt
+            self.screen.blit(prompt, (center_x - prompt.get_width() / 2, start_y))
+            # Draw selector box and piece
+            sprite_selector.y = start_y + prompt.get_height() + 20
             sprite_selector.draw()
+            # Draw nav buttons
+            nav_y = sprite_selector.y + selector_box_height + 40
+            back_button.rect.y = nav_y
+            next_button.rect.y = nav_y
             back_button.draw()
-            next_button.draw()
-            confirm_text = self.font.render("press enter to confirm", True, LIGHT_GREY)
-            self.screen.blit(confirm_text, (center_x - confirm_text.get_width() / 2, center_y + 140 * self.scale_factor))
+            if next_button.is_hovered or sprite_selector.get_selected_sprite():
+                next_button.draw()
+            else:
+                pygame.draw.rect(self.screen, (180, 180, 180), next_button.rect)
+                pygame.draw.rect(self.screen, BLACK, next_button.rect, 2)
+                text_surf = next_button.font.render(next_button.text, True, (100, 100, 100))
+                text_rect = text_surf.get_rect(center=next_button.rect.center)
+                self.screen.blit(text_surf, text_rect)
+            # Draw confirm text
+            confirm_y = nav_y + button_height + 20
+            self.screen.blit(confirm_text, (center_x - confirm_text.get_width() / 2, confirm_y))
             pygame.display.update()
 
     def show_difficulty_selection(self):
@@ -443,7 +481,8 @@ class GameMenu:
             prompt = self.font.render("select difficulty:", True, WHITE)
             prompt_height = prompt.get_height()
             # Confirm text
-            confirm_text = self.font.render("press Enter to confirm", True, LIGHT_GREY)
+            confirm_font = pygame.font.Font(BOXING_FONT_PATH, int(18 * self.scale_factor))
+            confirm_text = confirm_font.render("press Enter to confirm", True, LIGHT_GREY)
             confirm_height = confirm_text.get_height()
             # Total height of all elements
             total_height = (
@@ -460,8 +499,9 @@ class GameMenu:
             difficulty_selector.draw(buttons_y)
             # Draw nav buttons
             nav_y = buttons_y + len(difficulty_selector.buttons) * button_height + (len(difficulty_selector.buttons) - 1) * spacing + nav_spacing
-            back_button = Button(self.screen, "Back", center_x - nav_button_width - 10, nav_y, nav_button_width, nav_button_height, LIGHT_GREY, WHITE)
-            next_button = Button(self.screen, "Next", center_x + 10, nav_y, nav_button_width, nav_button_height, GREEN, (100, 255, 100))
+            back_button = Button(self.screen, "Back", center_x - nav_button_width - 10, nav_y, nav_button_width, nav_button_height, BLACK, WHITE, WHITE, BLACK, WHITE, BLACK)
+            # Next button: yellow/black with black border
+            next_button = Button(self.screen, "Next", center_x + 10, nav_y, nav_button_width, nav_button_height, (255, 230, 80), (255, 255, 180), BLACK, BLACK, BLACK)
             mouse_pos = pygame.mouse.get_pos()
             back_button.check_hover(mouse_pos)
             next_button.check_hover(mouse_pos)
@@ -470,8 +510,8 @@ class GameMenu:
             if difficulty_selector.selected is not None:
                 next_button.draw()
             else:
-                pygame.draw.rect(self.screen, (180, 220, 180), next_button.rect)
-                pygame.draw.rect(self.screen, WHITE, next_button.rect, 2)
+                pygame.draw.rect(self.screen, (180, 180, 180), next_button.rect)
+                pygame.draw.rect(self.screen, BLACK, next_button.rect, 2)
                 text_surf = next_button.font.render(next_button.text, True, (100, 100, 100))
                 text_rect = text_surf.get_rect(center=next_button.rect.center)
                 self.screen.blit(text_surf, text_rect)
@@ -494,6 +534,8 @@ class GameMenu:
                 difficulty_selector.handle_event(event, mouse_pos)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and difficulty_selector.selected is not None:
                     return difficulty_selector.get_selected_difficulty(), False, True
+                if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                    viewing = False
             pygame.display.update()
 
     def show_leaderboard(self):
@@ -645,19 +687,20 @@ class GameUI:
                                   square_size, square_size))
                 cx = int(x_offset + c * square_size + square_size / 2)
                 cy = int(y_offset + r * square_size + square_size + square_size / 2)
-                # Draw semi-transparent holes (tempered glass look)
-                pygame.gfxdraw.filled_circle(board_surface, int(cx), int(cy), int(radius), (0, 0, 0, 120))
-                pygame.gfxdraw.aacircle(board_surface, int(cx), int(cy), int(radius), (0, 0, 0, 120))
+                # Draw semi-transparent holes (tempered glass look, less transparent)
+                pygame.gfxdraw.filled_circle(board_surface, int(cx), int(cy), int(radius), (0, 0, 0, 180))
+                pygame.gfxdraw.aacircle(board_surface, int(cx), int(cy), int(radius), (0, 0, 0, 180))
         for c in range(COLUMN_COUNT):
             for r in range(ROW_COUNT):
                 cx = int(x_offset + c * square_size + square_size / 2)
                 cy = int(y_offset + WINDOW_HEIGHT * scale_factor - r * square_size - square_size / 2)
                 if board[r][c] == PLAYER_PIECE:
-                    pygame.gfxdraw.filled_circle(board_surface, int(cx), int(cy), int(radius) + supersample, self.player_color)
-                    pygame.gfxdraw.aacircle(board_surface, int(cx), int(cy), int(radius) + supersample, self.player_color)
+                    # Increase piece size to fully cover the hole
+                    pygame.gfxdraw.filled_circle(board_surface, int(cx), int(cy), int(radius) + supersample * 2, self.player_color)
+                    pygame.gfxdraw.aacircle(board_surface, int(cx), int(cy), int(radius) + supersample * 2, self.player_color)
                 elif board[r][c] == AI_PIECE:
-                    pygame.gfxdraw.filled_circle(board_surface, int(cx), int(cy), int(radius) + supersample, self.ai_color)
-                    pygame.gfxdraw.aacircle(board_surface, int(cx), int(cy), int(radius) + supersample, self.ai_color)
+                    pygame.gfxdraw.filled_circle(board_surface, int(cx), int(cy), int(radius) + supersample * 2, self.ai_color)
+                    pygame.gfxdraw.aacircle(board_surface, int(cx), int(cy), int(radius) + supersample * 2, self.ai_color)
         small_surface = pygame.transform.smoothscale(board_surface, (self.screen_width, self.screen_height))
         self.screen.blit(small_surface, (0, 0))
         # Draw a semi-transparent black header bar at the top

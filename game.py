@@ -5,6 +5,7 @@ from board import Board
 from ai import AIPlayer
 from ui import GameUI, Button, GameMenu
 from utils import *
+from utils import TITLE_YELLOW
 
 class Game:
     def __init__(self, screen, player_name, difficulty, sprite_choice):
@@ -26,6 +27,7 @@ class Game:
         self.leaderboard = self.load_leaderboard()
         # Track fullscreen state
         self.fullscreen = False
+        self.player_moves = 0  # Track player moves for scoring
 
     def toggle_fullscreen(self):
         """
@@ -122,18 +124,17 @@ class Game:
                         print(f"Player dropping piece at col: {col}")
                         row = self.board.get_next_open_row(col)
                         self.board.drop_piece(row, col, PLAYER_PIECE)
-
+                        self.player_moves += 1  # Increment player move count
                         if self.board.winning_move(PLAYER_PIECE):
-                            self.score += 100
+                            self.score = max(1000 - 20 * self.player_moves, 100)
                             self.ui.show_winner(self.player_name)
                             self.game_over = True
                             self.update_leaderboard()
                         elif len(self.board.get_valid_locations()) == 0:
-                            # Draw: board is full and no winner
+                            self.score = 50  # Draw
                             self.ui.show_winner("Draw")
                             self.game_over = True
                             self.update_leaderboard()
-
                         self.turn = AI
 
     def ai_move(self):
@@ -142,6 +143,7 @@ class Game:
             valid_locations = self.board.get_valid_locations()
             if not valid_locations:
                 # Board is full, declare a draw
+                self.score = 50  # Draw
                 self.ui.show_winner("Draw")
                 self.game_over = True
                 self.update_leaderboard()
@@ -151,6 +153,7 @@ class Game:
             if col is None or not self.board.is_valid_location(col):
                 # Log error and treat as draw for safety
                 print(f"AI returned invalid move: {col}. Valid locations: {valid_locations}")
+                self.score = 50  # Draw
                 self.ui.show_winner("Draw")
                 self.game_over = True
                 self.update_leaderboard()
@@ -161,10 +164,12 @@ class Game:
             print(f"AI placed piece in column {col}, row {row}")  # Debug log
 
             if self.board.winning_move(AI_PIECE):
+                self.score = 0  # Loss
                 self.ui.show_winner("AI")
                 self.game_over = True
                 self.update_leaderboard()
             elif len(self.board.get_valid_locations()) == 0:
+                self.score = 50  # Draw
                 self.ui.show_winner("Draw")
                 self.game_over = True
                 self.update_leaderboard()
@@ -191,8 +196,8 @@ class Game:
                 screen_height = self.screen.get_height()
                 center_x = screen_width // 2
                 center_y = screen_height // 2
-                leaderboard_button = Button(self.screen, "View Leaderboard", center_x - button_width//2, center_y - button_height - 10, button_width, button_height, BLUE, LIGHT_BLUE)
-                menu_button = Button(self.screen, "Back to Menu", center_x - button_width//2, center_y + 10, button_width, button_height, GREEN, (100, 255, 100))
+                leaderboard_button = Button(self.screen, "View Leaderboard", center_x - button_width//2, center_y - button_height - 10, button_width, button_height, BLACK, WHITE, WHITE, BLACK)
+                menu_button = Button(self.screen, "Back to Menu", center_x - button_width//2, center_y + 10, button_width, button_height, TITLE_YELLOW, (255, 255, 180), BLACK, BLACK)
                 waiting = True
                 while waiting:
                     for event in pygame.event.get():
