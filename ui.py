@@ -172,7 +172,7 @@ class DifficultySelector:
         self.width = 300
         self.height = 40
         self.font = pygame.font.Font(BOXING_FONT_PATH, 24)
-        self.difficulties = ["easy", "medium", "hard"]
+        self.difficulties = ["easy", "medium", "hard", "ai_vs_ai"]
         self.buttons = []
         
         button_width = self.width // 3
@@ -180,10 +180,8 @@ class DifficultySelector:
             # All yellow/black scheme
             color = (255, 230, 80)
             hover_color = (255, 255, 180)
-            self.buttons.append(Button(screen, diff.capitalize(), 
-                                      x + i * button_width, y, 
-                                      button_width, self.height, 
-                                      color, hover_color, BLACK, BLACK, BLACK))
+            label = "AI vs AI" if diff == "ai_vs_ai" else diff.capitalize()
+            self.buttons.append(Button(screen, label, x + i * button_width, y, button_width, self.height, color, hover_color, BLACK, BLACK, BLACK))
         
         self.selected = None  # Default to easy
     
@@ -619,7 +617,7 @@ class GameMenu:
             pygame.display.update()
 
 class GameUI:
-    def __init__(self, screen, player_name, sprite_choice, screen_width, screen_height):
+    def __init__(self, screen, player_name, sprite_choice, screen_width, screen_height, ai_vs_ai=False):
         self.screen = screen
         self.player_name = player_name
         self.sprite_choice = sprite_choice
@@ -631,6 +629,7 @@ class GameUI:
         self.scale_factor = min(screen_width / WINDOW_WIDTH, screen_height / WINDOW_HEIGHT)
         self.square_size = int(SQUARESIZE * self.scale_factor)
         self.radius = int(RADIUS * self.scale_factor)
+        self.ai_vs_ai = ai_vs_ai
         if sprite_choice == "Red":
             self.player_color = RED
             self.ai_color = YELLOW
@@ -709,8 +708,14 @@ class GameUI:
         header_surface.fill((0, 0, 0, 180))
         self.screen.blit(header_surface, (0, 0))
         x_offset, y_offset = self.get_offsets()
-        player_text = self.font_small.render(f"Player: {self.player_name}", True, self.player_color)
-        self.screen.blit(player_text, (x_offset + 10, y_offset + 10))
+        if self.ai_vs_ai:
+            ai1_text = self.font_small.render("AI 1", True, self.player_color)
+            ai2_text = self.font_small.render("AI 2", True, self.ai_color)
+            self.screen.blit(ai1_text, (x_offset + 10, y_offset + 10))
+            self.screen.blit(ai2_text, (x_offset + 30 + ai1_text.get_width(), y_offset + 10))
+        else:
+            player_text = self.font_small.render(f"Player: {self.player_name}", True, self.player_color)
+            self.screen.blit(player_text, (x_offset + 10, y_offset + 10))
     
     def update_hover(self, x_pos):
         # Calculate centering offsets
@@ -736,9 +741,18 @@ class GameUI:
     def draw_score(self, score):
         # Calculate centering offsets
         x_offset, y_offset = self.get_offsets()
-        
-        score_text = self.font_small.render(f"Score: {score}", True, WHITE)
-        self.screen.blit(score_text, (x_offset + WINDOW_WIDTH * self.scale_factor - score_text.get_width() - 10, y_offset + 10))
+        if self.ai_vs_ai and isinstance(score, tuple):
+            ai1_score, ai2_score = score
+            ai1_text = self.font_small.render(f"AI 1: {ai1_score}", True, self.player_color)
+            ai2_text = self.font_small.render(f"AI 2: {ai2_score}", True, self.ai_color)
+            # Place AI 2 score to the right of AI 1 score, both right-aligned
+            total_width = ai1_text.get_width() + 20 + ai2_text.get_width()
+            right_x = x_offset + WINDOW_WIDTH * self.scale_factor - total_width - 10
+            self.screen.blit(ai1_text, (right_x, y_offset + 10))
+            self.screen.blit(ai2_text, (right_x + ai1_text.get_width() + 20, y_offset + 10))
+        else:
+            score_text = self.font_small.render(f"Score: {score}", True, WHITE)
+            self.screen.blit(score_text, (x_offset + WINDOW_WIDTH * self.scale_factor - score_text.get_width() - 10, y_offset + 10))
     
     def show_winner(self, winner):
         # Calculate centering offsets
