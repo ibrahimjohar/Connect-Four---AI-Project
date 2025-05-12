@@ -86,9 +86,9 @@ The performance of the AI was evaluated through several matches against human pl
   - **AI vs AI**
   
 ### Turn-based Mechanics:
-- The game alternates turns between the two players.
-- On each turn, the player (or AI) selects a column to drop a disc, and the disc falls to the lowest available row in that column.
-- The AI makes its move immediately after the human player, using the decision making algorithm to select the best move.
+- The game alternates turns between two players or between a player and the AI.
+- On each turn, the current player selects a column to drop a disc, and the disc falls to the lowest available row in that column.
+- In AI modes, the AI makes its move immediately using the decision making algorithm.
 - The game continues until a player aligns four discs in a row or all columns are filled.
 
 ### Winning Conditions:
@@ -118,10 +118,17 @@ One of the main challenges encountered was optimizing the performance of the Min
 ## **7. Team Contributions**
 
 ### Team Members and Responsibilities:
-- **Emman Ali:** Responsible for AI algorithm development (Minimax, Alpha-Beta Pruning).
-- **Amna Khan:** Handled game rule modifications and board design.
-- **Ibrahim Johar:** Focused on implementing the user interface and integrating AI with gameplay.
-- **Areeba Hasnain:** Conducted performance testing and evaluation of the AI's decisions.
+- **Emman Ali**  
+  Implemented the board management system that maintains the game state, validates moves, detects win conditions, and evaluates board positions to support AI strategies.
+
+- **Areeba Hasnain**  
+  Integrated the Minimax and Alpha-Beta Pruning algorithms into different game modes and ensured smooth functionality across difficulty levels.
+
+- **Ibrahim Johar**  
+  Designed and developed the user interface and handled integration of the AI logic with interactive gameplay for a seamless player experience.
+
+- **Amna Khan**  
+  Conducted performance testing and evaluation of the AI across various difficulty levels and modes, including statistical analysis of win rates compared to human players.
 
 ---
 
@@ -130,25 +137,29 @@ One of the main challenges encountered was optimizing the performance of the Min
 ### AI Performance and Multi-Player Setting:
 The AI’s performance was evaluated through multiple matches against human players at varying difficulty levels, and the results are summarized below:
 
-- **Win Rate**:
-  - **Easy Level**: The AI won **15%** of the matches, playing more passively and allowing human players to win most of the time.
-  - **Medium Level**: The AI won **60%** of the matches, making intermediate-level strategic moves and leading to more competitive matches.
-  - **Hard Level**: The AI won **85%** of the matches, playing optimally and consistently challenging human players by evaluating multiple future moves to select the best course of action.
+- **Win Rate Analysis (Based on AI Search Depth)**:
+  - **Easy Level (Depth 1)**: The AI won approximately **15%** of the matches. With minimal foresight, it made basic decisions, resulting in a higher chance for human players to win.
+  - **Medium Level (Depth 3)**: The AI achieved a win rate of around **60%**, using moderate lookahead to make smarter, more strategic moves that created balanced and competitive gameplay.
+  - **Hard Level (Depth 5)**: The AI dominated with an **85%** win rate, evaluating deeper game trees and consistently selecting optimal moves, making it significantly more challenging for human opponents.
 
 - **Decision-Making Time**: The AI made optimal moves with an average decision-making time of **1 second** per move, ensuring smooth gameplay.
 
 - **Effectiveness**: The AI demonstrated its strategic depth, including blocking opponent moves and setting up winning opportunities. The implementation of **Alpha-Beta pruning** allowed the AI to evaluate multiple game states quickly, improving performance without compromising on decision quality.
 
-Overall, the AI's performance was highly satisfactory, providing a challenging and enjoyable experience for players at all levels. The use of the **Minimax algorithm** with **Alpha-Beta pruning** allowed the AI to make intelligent decisions in real-time, adapting its strategy based on the difficulty level.
+- **User vs User Mode**: This mode allows two human players to play locally on the same device, making the game more inclusive and social.
+
+- **AI vs AI Mode**: Useful for observing how different strategies play out at different difficulty levels, this mode demonstrates the AI’s reasoning and decision-making in a competitive environment.
 
 ---
 
 ## **9. References**
-1. 
-2. 
-3. 
+1. https://youtu.be/STjW3eH0Cik?si=ftXH2LIzpUntBnrs
+2. https://youtu.be/tDv7lrklaQE?si=FLQk_-NtNbqfzier
+3. https://youtu.be/xBXHtz4Gbdo?si=lrK357VH_7Z4O9xI
+4. https://youtu.be/JC1QsLOXp-I?si=Av-grFz5l5r6xW_4
+5. https://youtu.be/FfWpgLFMI7w?si=86ivj_5_R5oLJ0rt
 
 ---
 
 ## **10. Video Demo**
-
+Attached in repository.
