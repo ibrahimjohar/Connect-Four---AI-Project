@@ -239,8 +239,10 @@ class GameMenu:
         self.font = pygame.font.Font(BOXING_FONT_PATH, int(32 * self.scale_factor))
         self.name_input = ""
         self.active = True
-        self.bg_title = pygame.image.load(os.path.join("imgs", "bg1.jpg")).convert()
+        self.bg_title1 = pygame.image.load(os.path.join("imgs", "bg1.jpg")).convert()
         self.bg_other = pygame.image.load(os.path.join("imgs", "bg2.jpg")).convert()
+        self.bg_scroll_x = 0
+        self.bg_scroll_speed = 0.46  # increased speed for smoother/faster scroll
         self.update_layout()
 
     def update_layout(self):
@@ -255,55 +257,167 @@ class GameMenu:
         self.screen_height = new_height
         self.update_layout()
 
-    def blit_centered_bg(self, img, screen):
-        img_w, img_h = img.get_size()
-        win_w, win_h = screen.get_size()
-        scale = max(win_w / img_w, win_h / img_h)
-        new_w = int(img_w * scale)
-        new_h = int(img_h * scale)
-        bg_scaled = pygame.transform.smoothscale(img, (new_w, new_h))
-        x = (win_w - new_w) // 2
-        y = (win_h - new_h) // 2
-        screen.fill((0, 0, 0))
-        screen.blit(bg_scaled, (x, y))
+    def blit_centered_bg(self, img, screen, scroll_x=None):
+        # For title page, use robust seamless alternating tiling of bg1 and its horizontal flip
+        if hasattr(self, 'bg_title1') and img == self.bg_title1:
+            if scroll_x is None:
+                scroll_x = self.bg_scroll_x
+            img_w, img_h = self.bg_title1.get_size()
+            win_w, win_h = screen.get_size()
+            scale = max(win_w / img_w, win_h / img_h)
+            new_w = int(img_w * scale)
+            new_h = int(img_h * scale)
+            bg1_scaled = pygame.transform.smoothscale(self.bg_title1, (new_w, new_h))
+            bg1_flipped = pygame.transform.flip(bg1_scaled, True, False)
+            y = (win_h - new_h) // 2
+            screen.fill((0, 0, 0))
+            num_tiles = (win_w // new_w) + 3
+            scroll_x = scroll_x % (2 * new_w)
+            for i in range(-1, num_tiles):
+                img_to_blit = bg1_scaled if (i % 2 == 0) else bg1_flipped
+                x = -scroll_x + i * new_w
+                screen.blit(img_to_blit, (x, y))
+        else:
+            img_w, img_h = img.get_size()
+            win_w, win_h = screen.get_size()
+            scale = max(win_w / img_w, win_h / img_h)
+            new_w = int(img_w * scale)
+            new_h = int(img_h * scale)
+            bg_scaled = pygame.transform.smoothscale(img, (new_w, new_h))
+            x = (win_w - new_w) // 2
+            y = (win_h - new_h) // 2
+            screen.fill((0, 0, 0))
+            screen.blit(bg_scaled, (x, y))
 
-    def show(self):
-        # 1. Title screen
-        self.show_title_screen()
-        while True:
-            # 2. Name input
-            back, next_ = self.show_name_input()
-            if back:
-                self.show_title_screen()
-                continue
-            if not next_:
-                continue
-            # 3. Piece selection
-            sprite, back, next_ = self.show_piece_selection()
-            if back:
-                continue  # Go back to name input
-            if not next_:
-                continue
-            # 4. Difficulty selection
-            difficulty, back, next_ = self.show_difficulty_selection()
-            if back:
-                # Go back to piece selection
-                while True:
-                    sprite, back2, next2 = self.show_piece_selection()
-                    if back2:
-                        break  # Go back to name input
-                    if next2:
-                        break  # Proceed to difficulty selection
-                if back2:
-                    continue  # Go back to name input
-                # Now show difficulty again
-                continue
-            if not next_:
-                continue
-            return (self.name_input, difficulty, sprite)
+    def fade_in_background(self, duration=1000):
+        # Fade in the background from black to full opacity
+        clock = pygame.time.Clock()
+        steps = 30
+        for alpha in range(0, 256, max(1, int(255/steps))):
+            temp_surface = pygame.Surface(self.screen.get_size()).convert_alpha()
+            # Always use scroll_x=0 during fade-in to avoid glitches
+            self.blit_centered_bg(self.bg_title1, temp_surface, scroll_x=0)
+            temp_surface.set_alpha(alpha)
+            self.screen.fill((0,0,0))
+            self.screen.blit(temp_surface, (0,0))
+            pygame.display.update()
+            clock.tick(60)
+
+    def typewriter_text(self, text, font, color, pos, subtitle=None, subtitle_font=None, subtitle_pos=None, delay=110):
+        for i in range(len(text)):
+            self.blit_centered_bg(self.bg_title1, self.screen)
+            # Draw the growing title
+            title_surface = font.render(text[:i+1], True, color)
+            self.screen.blit(title_surface, pos)
+            # Draw subtitle if provided
+            if subtitle and subtitle_font and subtitle_pos:
+                subtitle_surface = subtitle_font.render(subtitle, True, WHITE)
+                self.screen.blit(subtitle_surface, subtitle_pos)
+            pygame.display.update()
+            pygame.time.wait(delay)
+
+    def fade_in_surface(self, surface, pos, bg_img, duration=600):
+        # Fade in a surface by increasing its alpha
+        clock = pygame.time.Clock()
+        steps = 30
+        for alpha in range(0, 256, int(255/steps)):
+            self.blit_centered_bg(bg_img, self.screen)
+            # Draw the full title (already typed)
+            center_x = self.screen_width / 2
+            center_y = self.screen_height / 2
+            title = "connect 4our"
+            title_surface = self.font_large.render(title, True, TITLE_YELLOW)
+            title_pos = (center_x - title_surface.get_width() / 2, center_y - title_surface.get_height() / 2)
+            # Draw previous faded-in elements
+            for s, p, a in getattr(self, '_fadein_prev', []):
+                s.set_alpha(255)
+                self.screen.blit(s, p)
+            # Draw the current surface with alpha
+            surface.set_alpha(alpha)
+            self.screen.blit(surface, pos)
+            pygame.display.update()
+            clock.tick(60)
+        # Store this as faded in
+        if not hasattr(self, '_fadein_prev'):
+            self._fadein_prev = []
+        self._fadein_prev.append((surface.copy(), pos, 255))
 
     def show_title_screen(self):
+        # 1. Fade in the background
+        self.fade_in_background(duration=1000)
+        # 2. Start background scrolling and typewriter effect together
+        center_x = self.screen_width / 2
+        center_y = self.screen_height / 2
+        title = "connect 4our"
+        title_font = self.font_large
+        title_color = TITLE_YELLOW
+        title_surface = title_font.render(title, True, title_color)
+        title_pos = (center_x - title_surface.get_width() / 2, center_y - title_surface.get_height() / 2)
+        # Subtitle
+        subtitle_font = pygame.font.Font(BOXING_FONT_PATH, int(self.font_large.get_height() * 0.20))
+        subtitle_text = "powered by minimax alpha-beta pruning AI algorithm."
+        subtitle_surface = subtitle_font.render(subtitle_text, True, WHITE)
+        subtitle_y = center_y + title_surface.get_height() / 2 + 10
+        subtitle_pos = (center_x - subtitle_surface.get_width() / 2, subtitle_y)
+        # Click prompt
+        click_font = pygame.font.Font(BOXING_FONT_PATH, int(self.font_large.get_height() * 0.18))
+        click_text = "click anywhere to start"
+        click_surface = click_font.render(click_text, True, WHITE)
+        click_y = subtitle_y + subtitle_surface.get_height() + 80
+        click_pos = (center_x - click_surface.get_width() / 2, click_y)
+        # Credits
+        credits_font = pygame.font.Font(BOXING_FONT_PATH, int(self.font_large.get_height() * 0.15))
+        credits_text = "developed by: ibrahim - areeba - emman - amna"
+        credits_surface = credits_font.render(credits_text, True, WHITE)
+        credits_y = self.screen_height - credits_surface.get_height() - 30
+        credits_pos = (center_x - credits_surface.get_width() / 2, credits_y)
+        # 3. Animate background scroll and typewriter effect for title
+        self._fadein_prev = []
+        scroll_x = 0  # Start at 0, first frame after fade-in
+        scroll_speed = self.bg_scroll_speed
+        typewriter_done = False
+        title_chars = ""
+        typewriter_index = 0
+        typewriter_delay = 110  # ms per char
+        last_type_time = pygame.time.get_ticks()
+        running = True
+        clock = pygame.time.Clock()
+        while running:
+            now = pygame.time.get_ticks()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.VIDEORESIZE:
+                    self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                    self.handle_resize(event.w, event.h)
+            # Animate background scroll
+            scroll_x += scroll_speed
+            self.blit_centered_bg(self.bg_title1, self.screen, scroll_x=scroll_x)
+            # Animate typewriter
+            if not typewriter_done and now - last_type_time > typewriter_delay:
+                typewriter_index += 1
+                last_type_time = now
+                if typewriter_index >= len(title):
+                    typewriter_done = True
+            if not typewriter_done:
+                title_chars = title[:typewriter_index]
+                title_surface_partial = title_font.render(title_chars, True, title_color)
+                self.screen.blit(title_surface_partial, title_pos)
+            else:
+                self.screen.blit(title_surface, title_pos)
+            pygame.display.update()
+            clock.tick(60)
+            if typewriter_done:
+                break
+        # 4. Fade in subtitle, prompt, and credits one after another
+        self._fadein_prev = []
+        self.fade_in_surface(subtitle_surface, subtitle_pos, self.bg_title1)
+        self.fade_in_surface(click_surface, click_pos, self.bg_title1)
+        self.fade_in_surface(credits_surface, credits_pos, self.bg_title1)
+        # 5. After all fades, keep animating background and wait for input
         waiting = True
+        scroll_x = 0
         while waiting:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -314,32 +428,14 @@ class GameMenu:
                     self.handle_resize(event.w, event.h)
                 if event.type in [pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN]:
                     waiting = False
-            # Draw background image (title)
-            bg = pygame.transform.smoothscale(self.bg_title, (self.screen_width, self.screen_height))
-            self.screen.blit(bg, (0, 0))
-            center_x = self.screen_width / 2
-            center_y = self.screen_height / 2
-            title = self.font_large.render("connect 4our", True, TITLE_YELLOW)
-            self.screen.blit(title, (center_x - title.get_width() / 2, center_y - title.get_height() / 2))
-            # Subtitle
-            subtitle_font = pygame.font.Font(BOXING_FONT_PATH, int(self.font_large.get_height() * 0.20))
-            subtitle_text = "powered by minimax alpha-beta pruning AI algorithm."
-            subtitle_surface = subtitle_font.render(subtitle_text, True, WHITE)
-            subtitle_y = center_y + title.get_height() / 2 + 10
-            self.screen.blit(subtitle_surface, (center_x - subtitle_surface.get_width() / 2, subtitle_y))
-            # Move 'click anywhere to start' even further down
-            click_font = pygame.font.Font(BOXING_FONT_PATH, int(self.font_large.get_height() * 0.18))
-            click_text = "click anywhere to start"
-            click_surface = click_font.render(click_text, True, WHITE)
-            click_y = subtitle_y + subtitle_surface.get_height() + 80  # Increased gap further
-            self.screen.blit(click_surface, (center_x - click_surface.get_width() / 2, click_y))
-            # Credits
-            credits_font = pygame.font.Font(BOXING_FONT_PATH, int(self.font_large.get_height() * 0.15))
-            credits_text = "developed by: ibrahim - areeba - emman - amna"
-            credits_surface = credits_font.render(credits_text, True, WHITE)
-            credits_y = self.screen_height - credits_surface.get_height() - 30
-            self.screen.blit(credits_surface, (center_x - credits_surface.get_width() / 2, credits_y))
+            scroll_x += scroll_speed
+            self.blit_centered_bg(self.bg_title1, self.screen, scroll_x=scroll_x)
+            self.screen.blit(title_surface, title_pos)
+            self.screen.blit(subtitle_surface, subtitle_pos)
+            self.screen.blit(click_surface, click_pos)
+            self.screen.blit(credits_surface, credits_pos)
             pygame.display.update()
+            clock.tick(60)
 
     def show_name_input(self):
         name_input = ""
@@ -625,6 +721,41 @@ class GameMenu:
             back_text = small_font.render("Press any key to return", True, LIGHT_GREY)
             self.screen.blit(back_text, (center_x - back_text.get_width() / 2, self.screen_height - 40 * scale_factor))
             pygame.display.update()
+
+    def show(self):
+        # 1. Title screen
+        self.show_title_screen()
+        while True:
+            # 2. Name input
+            back, next_ = self.show_name_input()
+            if back:
+                self.show_title_screen()
+                continue
+            if not next_:
+                continue
+            # 3. Piece selection
+            sprite, back, next_ = self.show_piece_selection()
+            if back:
+                continue  # Go back to name input
+            if not next_:
+                continue
+            # 4. Difficulty selection
+            difficulty, back, next_ = self.show_difficulty_selection()
+            if back:
+                # Go back to piece selection
+                while True:
+                    sprite, back2, next2 = self.show_piece_selection()
+                    if back2:
+                        break  # Go back to name input
+                    if next2:
+                        break  # Proceed to difficulty selection
+                if back2:
+                    continue  # Go back to name input
+                # Now show difficulty again
+                continue
+            if not next_:
+                continue
+            return (self.name_input, difficulty, sprite)
 
 class GameUI:
     def __init__(self, screen, player_name, sprite_choice, screen_width, screen_height, ai_vs_ai=False):
