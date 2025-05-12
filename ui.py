@@ -344,11 +344,8 @@ class GameMenu:
 
     def show_title_screen(self):
         """
-        Display the title screen with distinct animation phases.
+        Display the title screen with minimal animations for stability.
         """
-        # Phase 1: Initial background fade
-        self.fade_in_background(duration=1000)
-        
         # Initialize text elements
         center_x = self.screen_width / 2
         center_y = self.screen_height / 2
@@ -375,55 +372,13 @@ class GameMenu:
         credits_y = self.screen_height - credits_surface.get_height() - 30
         credits_pos = (center_x - credits_surface.get_width() / 2, credits_y)
         
-        # Phase 2: Typewriter effect for title
-        typewriter_done = False
-        typewriter_index = 0
-        typewriter_delay = 110
-        last_type_time = pygame.time.get_ticks()
+        # Simple animation loop
+        clock = pygame.time.Clock()
         scroll_x = 0
-        
-        while not typewriter_done:
-            current_time = pygame.time.get_ticks()
-            
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == pygame.VIDEORESIZE:
-                    self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
-                    self.handle_resize(event.w, event.h)
-                    center_x = self.screen_width / 2
-                    center_y = self.screen_height / 2
-            
-            # Draw background
-            self.blit_centered_bg(self.bg_title1, self.screen, scroll_x=scroll_x)
-            scroll_x += self.bg_scroll_speed
-            
-            # Update typewriter
-            if current_time - last_type_time > typewriter_delay:
-                typewriter_index += 1
-                last_type_time = current_time
-                if typewriter_index >= len(title):
-                    typewriter_done = True
-            
-            # Draw partial title
-            title_chars = title[:typewriter_index]
-            title_surface = title_font.render(title_chars, True, title_color)
-            title_pos = (center_x - title_surface.get_width() / 2, center_y - title_surface.get_height() / 2)
-            self.screen.blit(title_surface, title_pos)
-            
-            pygame.display.flip()
-            pygame.time.Clock().tick(60)
-        
-        # Phase 3: Fade in remaining elements
-        self._fadein_prev = []
-        self.fade_in_surface(subtitle_surface, subtitle_pos, self.bg_title1)
-        self.fade_in_surface(click_surface, click_pos, self.bg_title1)
-        self.fade_in_surface(credits_surface, credits_pos, self.bg_title1)
-        
-        # Phase 4: Wait for user input with continuous background scroll
         waiting = True
+        
         while waiting:
+            # Handle events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -436,7 +391,7 @@ class GameMenu:
                 if event.type in [pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN]:
                     waiting = False
             
-            # Draw everything
+            # Draw background
             self.blit_centered_bg(self.bg_title1, self.screen, scroll_x=scroll_x)
             scroll_x += self.bg_scroll_speed
             
@@ -449,7 +404,7 @@ class GameMenu:
             self.screen.blit(credits_surface, credits_pos)
             
             pygame.display.flip()
-            pygame.time.Clock().tick(60)
+            clock.tick(60)
 
     def show_name_input(self):
         name_input = ""
