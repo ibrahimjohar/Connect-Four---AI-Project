@@ -13,7 +13,7 @@ def main():
     screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.RESIZABLE)
     pygame.display.set_caption("Connect 4")
     
-    # Maximize the window using Windows API
+    #Maximize the window using Windows API
     try:
         hwnd = pygame.display.get_wm_info()['window']
         ctypes.windll.user32.ShowWindow(hwnd, 3)  # 3 = SW_MAXIMIZE
