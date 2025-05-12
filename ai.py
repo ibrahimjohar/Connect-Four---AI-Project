@@ -1,12 +1,37 @@
+"""
+AI player module implementing the Minimax algorithm with alpha-beta pruning.
+This module provides the AI logic for making moves in the Connect Four game.
+"""
+
 import random
 import math
 import numpy as np
 
 class AIPlayer:
+    """
+    AI player class that uses the Minimax algorithm to determine optimal moves.
+    Supports different difficulty levels by adjusting the search depth.
+    """
+    
     def __init__(self, difficulty):
-        self.difficulty = difficulty  # "easy", "medium", "hard"
+        """
+        Initialize the AI player with a specified difficulty level.
+        
+        Args:
+            difficulty (str): AI difficulty level ("easy", "medium", or "hard")
+        """
+        self.difficulty = difficulty
     
     def get_move(self, board):
+        """
+        Determine the next move based on the current board state and difficulty level.
+        
+        Args:
+            board (Board): Current game board state
+            
+        Returns:
+            int: Column index for the AI's move
+        """
         if self.difficulty == "easy":
             return self.minimax_move(board, depth=1)
         elif self.difficulty == "medium":
@@ -15,10 +40,33 @@ class AIPlayer:
             return self.minimax_move(board, depth=5)
     
     def minimax_move(self, board, depth=5):
+        """
+        Get the best move using the Minimax algorithm.
+        
+        Args:
+            board (Board): Current game board state
+            depth (int): Maximum depth for the minimax search
+            
+        Returns:
+            int: Column index for the best move
+        """
         col, _ = self.minimax(board, depth, -math.inf, math.inf, True)
         return col
     
     def minimax(self, board, depth, alpha, beta, maximizing_player):
+        """
+        Implement the Minimax algorithm with alpha-beta pruning.
+        
+        Args:
+            board (Board): Current game board state
+            depth (int): Remaining search depth
+            alpha (float): Alpha value for pruning
+            beta (float): Beta value for pruning
+            maximizing_player (bool): True if maximizing player's turn
+            
+        Returns:
+            tuple: (column index, score) for the best move
+        """
         valid_locations = board.get_valid_locations()
         is_terminal = board.is_terminal_node()
         

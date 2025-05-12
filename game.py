@@ -1,3 +1,8 @@
+"""
+Core game logic module for the Connect Four game.
+Manages game state, player turns, and interactions with the AI player.
+"""
+
 import pygame
 import sys
 import random
@@ -8,7 +13,21 @@ from utils import *
 from utils import TITLE_YELLOW
 
 class Game:
+    """
+    Main game class that manages the User vs AI game mode.
+    Handles game state, player turns, and interactions with the AI.
+    """
+    
     def __init__(self, screen, player_name, difficulty, sprite_choice):
+        """
+        Initialize the game with specified screen and player preferences.
+        
+        Args:
+            screen (pygame.Surface): Game display surface
+            player_name (str): Name of the human player
+            difficulty (str): AI difficulty level
+            sprite_choice (str): Player's chosen piece color
+        """
         self.screen = screen
         self.player_name = player_name
         self.difficulty = difficulty
@@ -36,6 +55,7 @@ class Game:
     def toggle_fullscreen(self):
         """
         Toggle between windowed and fullscreen mode.
+        Updates screen dimensions and UI scaling accordingly.
         """
         self.fullscreen = not self.fullscreen
         if self.fullscreen:
@@ -67,6 +87,12 @@ class Game:
         pygame.display.flip()
 
     def load_leaderboard(self):
+        """
+        Load the game leaderboard from a file.
+        
+        Returns:
+            dict: Dictionary mapping player names to their scores
+        """
         try:
             with open("leaderboard.txt", "r") as file:
                 leaderboard = {}
@@ -78,11 +104,18 @@ class Game:
             return {}
 
     def save_leaderboard(self):
+        """
+        Save the current leaderboard to a file.
+        """
         with open("leaderboard.txt", "w") as file:
             for name, score in self.leaderboard.items():
                 file.write(f"{name}:{score}\n")
 
     def update_leaderboard(self):
+        """
+        Update the leaderboard with the current player's score.
+        Only updates if the current score is higher than the previous best.
+        """
         if self.player_name in self.leaderboard:
             if self.score > self.leaderboard[self.player_name]:
                 self.leaderboard[self.player_name] = self.score
@@ -91,6 +124,10 @@ class Game:
         self.save_leaderboard()
 
     def handle_events(self):
+        """
+        Handle pygame events during the game.
+        Manages window resizing, player moves, and game state updates.
+        """
         if self.ai_vs_ai:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -151,6 +188,10 @@ class Game:
                             self.turn = AI
 
     def ai_move(self):
+        """
+        Handle the AI's turn.
+        Determines the AI's move using the AI player's strategy and updates the game state.
+        """
         if self.turn == AI and not self.game_over:
             # Check if there are valid moves
             valid_locations = self.board.get_valid_locations()
@@ -190,6 +231,10 @@ class Game:
             self.turn = PLAYER
 
     def run(self):
+        """
+        Run the main game loop.
+        Handles game initialization, event processing, and game state updates.
+        """
         from ui import Button, GameMenu
         started = not self.ai_vs_ai
         while True:

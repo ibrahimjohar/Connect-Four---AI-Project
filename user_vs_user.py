@@ -1,3 +1,8 @@
+"""
+User vs User game mode implementation for Connect Four.
+This module handles the game logic and UI for two human players competing against each other.
+"""
+
 import pygame
 import sys
 import datetime
@@ -7,7 +12,20 @@ from utils import *
 from ui import SpriteSelector
 
 class UserVsUserGame:
+    """
+    Main class for managing User vs User game mode.
+    Handles game state, player moves, and UI updates for two human players.
+    """
+    
     def __init__(self, screen, screen_width, screen_height):
+        """
+        Initialize the User vs User game with screen settings and game state.
+        
+        Args:
+            screen (pygame.Surface): Game display surface
+            screen_width (int): Width of the game window
+            screen_height (int): Height of the game window
+        """
         self.screen = screen
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -268,6 +286,11 @@ class UserVsUserGame:
             pygame.display.update()
 
     def run(self):
+        """
+        Main game loop for User vs User mode.
+        Handles game initialization, player moves, and game state updates.
+        Includes start screen, game play, and end game screens.
+        """
         from ui import Button
         self.prompt_names()
         self.ui.player_name = self.player1_name
