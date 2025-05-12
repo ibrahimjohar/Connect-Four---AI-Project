@@ -5,6 +5,7 @@ from game import Game
 from ui import LoadingScreen, GameMenu
 from utils import WINDOW_WIDTH, WINDOW_HEIGHT, FPS
 from ai_vs_ai import AIVsAIGame
+from user_vs_user import UserVsUserGame
 
 def main():
     pygame.init()
@@ -38,9 +39,15 @@ def main():
             if difficulty == 'ai_vs_ai':
                 ai_vs_ai_game = AIVsAIGame(screen, current_w, current_h)
                 ai_vs_ai_game.run()
+            elif difficulty == 'user_vs_user':
+                user_vs_user_game = UserVsUserGame(screen, current_w, current_h)
+                user_vs_user_game.run()
             else:
                 game = Game(screen, player_name, difficulty, sprite)
                 game.run()
+    elif difficulty == 'user_vs_user':
+        user_vs_user_game = UserVsUserGame(screen, current_w, current_h)
+        user_vs_user_game.run()
     else:
         game = Game(screen, player_name, difficulty, sprite)
         game.run()

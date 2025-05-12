@@ -172,7 +172,7 @@ class DifficultySelector:
         self.width = 300
         self.height = 40
         self.font = pygame.font.Font(BOXING_FONT_PATH, 24)
-        self.difficulties = ["easy", "medium", "hard", "ai_vs_ai"]
+        self.difficulties = ["easy", "medium", "hard", "ai_vs_ai", "user_vs_user"]
         self.buttons = []
         
         button_width = self.width // 3
@@ -180,7 +180,18 @@ class DifficultySelector:
             # All yellow/black scheme
             color = (255, 230, 80)
             hover_color = (255, 255, 180)
-            label = "AI vs AI" if diff == "ai_vs_ai" else diff.capitalize()
+            if diff == "easy":
+                label = "User vs AI (Easy)"
+            elif diff == "medium":
+                label = "User vs AI (Medium)"
+            elif diff == "hard":
+                label = "User vs AI (Hard)"
+            elif diff == "ai_vs_ai":
+                label = "AI vs AI"
+            elif diff == "user_vs_user":
+                label = "User vs User"
+            else:
+                label = diff.capitalize()
             self.buttons.append(Button(screen, label, x + i * button_width, y, button_width, self.height, color, hover_color, BLACK, BLACK, BLACK))
         
         self.selected = None  # Default to easy
@@ -247,7 +258,6 @@ class GameMenu:
     def blit_centered_bg(self, img, screen):
         img_w, img_h = img.get_size()
         win_w, win_h = screen.get_size()
-        # Use max instead of min to scale up and cover the screen
         scale = max(win_w / img_w, win_h / img_h)
         new_w = int(img_w * scale)
         new_h = int(img_h * scale)
@@ -476,11 +486,11 @@ class GameMenu:
             nav_button_height = int(self.screen_height * 0.06)
             nav_button_width = int(self.screen_width * 0.13)
             # Prompt text
-            prompt = self.font.render("select difficulty:", True, WHITE)
+            prompt = self.font.render("select game mode", True, WHITE)
             prompt_height = prompt.get_height()
             # Confirm text
             confirm_font = pygame.font.Font(BOXING_FONT_PATH, int(18 * self.scale_factor))
-            confirm_text = confirm_font.render("press Enter to confirm", True, LIGHT_GREY)
+            confirm_text = confirm_font.render("press enter to confirm", True, LIGHT_GREY)
             confirm_height = confirm_text.get_height()
             # Total height of all elements
             total_height = (
@@ -741,11 +751,20 @@ class GameUI:
     def draw_score(self, score):
         # Calculate centering offsets
         x_offset, y_offset = self.get_offsets()
-        if self.ai_vs_ai and isinstance(score, tuple):
+        # User vs User mode: tuple with (score1, score2, name1, name2, color1, color2)
+        if isinstance(score, tuple) and len(score) == 6:
+            score1, score2, name1, name2, color1, color2 = score
+            font = self.font_small
+            text1 = font.render(f"{name1}: {score1}", True, RED if color1 == "Red" else LIGHT_BLUE if color1 == "Blue" else GREEN)
+            text2 = font.render(f"{name2}: {score2}", True, RED if color2 == "Red" else LIGHT_BLUE if color2 == "Blue" else GREEN)
+            total_width = text1.get_width() + 20 + text2.get_width()
+            right_x = x_offset + WINDOW_WIDTH * self.scale_factor - total_width - 10
+            self.screen.blit(text1, (right_x, y_offset + 10))
+            self.screen.blit(text2, (right_x + text1.get_width() + 20, y_offset + 10))
+        elif self.ai_vs_ai and isinstance(score, tuple):
             ai1_score, ai2_score = score
             ai1_text = self.font_small.render(f"AI 1: {ai1_score}", True, self.player_color)
             ai2_text = self.font_small.render(f"AI 2: {ai2_score}", True, self.ai_color)
-            # Place AI 2 score to the right of AI 1 score, both right-aligned
             total_width = ai1_text.get_width() + 20 + ai2_text.get_width()
             right_x = x_offset + WINDOW_WIDTH * self.scale_factor - total_width - 10
             self.screen.blit(ai1_text, (right_x, y_offset + 10))
@@ -774,3 +793,15 @@ class GameUI:
         self.screen.blit(label, (x_offset + WINDOW_WIDTH * self.scale_factor//2 - label.get_width()//2, 
                                 y_offset + WINDOW_HEIGHT * self.scale_factor//2 - label.get_height()//2))
         pygame.display.update()
+
+    def blit_centered_bg(self, img, screen):
+        img_w, img_h = img.get_size()
+        win_w, win_h = screen.get_size()
+        scale = max(win_w / img_w, win_h / img_h)
+        new_w = int(img_w * scale)
+        new_h = int(img_h * scale)
+        bg_scaled = pygame.transform.smoothscale(img, (new_w, new_h))
+        x = (win_w - new_w) // 2
+        y = (win_h - new_h) // 2
+        screen.fill((0, 0, 0))
+        screen.blit(bg_scaled, (x, y))

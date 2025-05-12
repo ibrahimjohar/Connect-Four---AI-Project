@@ -4,6 +4,7 @@ import datetime
 from board import Board
 from ui import GameUI, Button, GameMenu, BOXING_FONT_PATH
 from utils import *
+from ui import SpriteSelector
 
 class UserVsUserGame:
     def __init__(self, screen, screen_width, screen_height):
@@ -21,26 +22,158 @@ class UserVsUserGame:
         self.turn = 0  # 0 for player 1, 1 for player 2
 
     def prompt_names(self):
-        # Simple prompt for both player names using the menu UI
         menu = GameMenu(self.screen, self.screen_width, self.screen_height)
         # First player
-        menu.name_input = ""
-        menu.active = True
         while True:
-            back, next_ = menu.show_name_input()
-            if next_:
-                self.player1_name = menu.name_input
+            menu.name_input = ""
+            menu.active = True
+            sprite_selector1 = SpriteSelector(self.screen, 0, 0)
+            player1_color = None
+            done = False
+            while not done:
+                center_x = self.screen_width / 2
+                center_y = self.screen_height / 2
+                scale = menu.scale_factor
+                button_width = 120 * scale
+                button_height = 40 * scale
+                spacing = 24 * scale
+                events = pygame.event.get()
+                for event in events:
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+                    if event.type == pygame.VIDEORESIZE:
+                        self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                        menu.handle_resize(event.w, event.h)
+                        center_x = self.screen_width / 2
+                        center_y = self.screen_height / 2
+                        sprite_selector1.update_layout()
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_RETURN and menu.name_input.strip():
+                            self.player1_name = menu.name_input
+                            player1_color = sprite_selector1.get_selected_sprite()
+                            done = True
+                        elif event.key == pygame.K_BACKSPACE:
+                            menu.name_input = menu.name_input[:-1]
+                        else:
+                            input_font = pygame.font.Font(BOXING_FONT_PATH, int(28 * scale))
+                            test_surface = input_font.render(menu.name_input + event.unicode, True, BLACK)
+                            if test_surface.get_width() < 300 * scale - 10 and len(menu.name_input) < 20:
+                                menu.name_input += event.unicode
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        sprite_selector1.handle_event(event, pygame.mouse.get_pos())
+                menu.blit_centered_bg(menu.bg_other, self.screen)
+                prompt = menu.font.render("player 1: enter your name & choose your piece", True, WHITE)
+                prompt_y = center_y - 160 * scale
+                self.screen.blit(prompt, (center_x - prompt.get_width() / 2, prompt_y))
+                input_rect = pygame.Rect(center_x - 150 * scale, center_y - 60 * scale, 300 * scale, 40 * scale)
+                pygame.draw.rect(self.screen, WHITE, input_rect)
+                pygame.draw.rect(self.screen, BLACK, input_rect, 2)
+                input_font = pygame.font.Font(BOXING_FONT_PATH, int(28 * scale))
+                name_surface = input_font.render(menu.name_input, True, BLACK)
+                self.screen.blit(name_surface, (center_x - 145 * scale, center_y - 55 * scale))
+                sprite_selector1.y = center_y - 10 * scale
+                sprite_selector1.draw()
+                back_button = Button(self.screen, "Back", center_x - button_width - spacing/2, center_y + 120 * scale, button_width, button_height, BLACK, WHITE, WHITE, BLACK, WHITE, BLACK)
+                next_button = Button(self.screen, "Next", center_x + spacing/2, center_y + 120 * scale, button_width, button_height, (255, 230, 80), (255, 255, 180), BLACK, BLACK, BLACK)
+                back_button.draw()  # For player 1, Back does nothing
+                if menu.name_input.strip():
+                    next_button.draw()
+                else:
+                    pygame.draw.rect(self.screen, (180, 180, 180), next_button.rect)
+                    pygame.draw.rect(self.screen, BLACK, next_button.rect, 2)
+                    text_surf = next_button.font.render(next_button.text, True, (100, 100, 100))
+                    text_rect = text_surf.get_rect(center=next_button.rect.center)
+                    self.screen.blit(text_surf, text_rect)
+                mouse_pos = pygame.mouse.get_pos()
+                for event in events:
+                    if next_button.is_clicked(mouse_pos, event) and menu.name_input.strip():
+                        self.player1_name = menu.name_input
+                        player1_color = sprite_selector1.get_selected_sprite()
+                        done = True
+                pygame.display.update()
+            if done:
                 break
         # Second player
-        menu.name_input = ""
-        menu.active = True
         while True:
-            back, next_ = menu.show_name_input()
-            if next_:
-                self.player2_name = menu.name_input
+            menu.name_input = ""
+            menu.active = True
+            sprite_selector2 = SpriteSelector(self.screen, 0, 0)
+            sprite_selector2.sprites = [c for c in sprite_selector2.sprites if c != player1_color]
+            sprite_selector2.current_sprite = 0
+            player2_color = None
+            done = False
+            while not done:
+                center_x = self.screen_width / 2
+                center_y = self.screen_height / 2
+                scale = menu.scale_factor
+                button_width = 120 * scale
+                button_height = 40 * scale
+                spacing = 24 * scale
+                events = pygame.event.get()
+                for event in events:
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+                    if event.type == pygame.VIDEORESIZE:
+                        self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                        menu.handle_resize(event.w, event.h)
+                        center_x = self.screen_width / 2
+                        center_y = self.screen_height / 2
+                        sprite_selector2.update_layout()
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_RETURN and menu.name_input.strip():
+                            self.player2_name = menu.name_input
+                            player2_color = sprite_selector2.get_selected_sprite()
+                            done = True
+                        elif event.key == pygame.K_BACKSPACE:
+                            menu.name_input = menu.name_input[:-1]
+                        else:
+                            input_font = pygame.font.Font(BOXING_FONT_PATH, int(28 * scale))
+                            test_surface = input_font.render(menu.name_input + event.unicode, True, BLACK)
+                            if test_surface.get_width() < 300 * scale - 10 and len(menu.name_input) < 20:
+                                menu.name_input += event.unicode
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        sprite_selector2.handle_event(event, pygame.mouse.get_pos())
+                menu.blit_centered_bg(menu.bg_other, self.screen)
+                prompt = menu.font.render("player 2: enter your name & choose your piece", True, WHITE)
+                prompt_y = center_y - 160 * scale
+                self.screen.blit(prompt, (center_x - prompt.get_width() / 2, prompt_y))
+                input_rect = pygame.Rect(center_x - 150 * scale, center_y - 60 * scale, 300 * scale, 40 * scale)
+                pygame.draw.rect(self.screen, WHITE, input_rect)
+                pygame.draw.rect(self.screen, BLACK, input_rect, 2)
+                input_font = pygame.font.Font(BOXING_FONT_PATH, int(28 * scale))
+                name_surface = input_font.render(menu.name_input, True, BLACK)
+                self.screen.blit(name_surface, (center_x - 145 * scale, center_y - 55 * scale))
+                sprite_selector2.y = center_y - 10 * scale
+                sprite_selector2.draw()
+                back_button = Button(self.screen, "Back", center_x - button_width - spacing/2, center_y + 120 * scale, button_width, button_height, BLACK, WHITE, WHITE, BLACK, WHITE, BLACK)
+                next_button = Button(self.screen, "Next", center_x + spacing/2, center_y + 120 * scale, button_width, button_height, (255, 230, 80), (255, 255, 180), BLACK, BLACK, BLACK)
+                back_button.draw()
+                if menu.name_input.strip():
+                    next_button.draw()
+                else:
+                    pygame.draw.rect(self.screen, (180, 180, 180), next_button.rect)
+                    pygame.draw.rect(self.screen, BLACK, next_button.rect, 2)
+                    text_surf = next_button.font.render(next_button.text, True, (100, 100, 100))
+                    text_rect = text_surf.get_rect(center=next_button.rect.center)
+                    self.screen.blit(text_surf, text_rect)
+                mouse_pos = pygame.mouse.get_pos()
+                for event in events:
+                    if back_button.is_clicked(mouse_pos, event):
+                        return self.prompt_names()
+                    if next_button.is_clicked(mouse_pos, event) and menu.name_input.strip():
+                        self.player2_name = menu.name_input
+                        player2_color = sprite_selector2.get_selected_sprite()
+                        done = True
+                pygame.display.update()
+            if done:
                 break
-        # Update UI with player 1's name
+        self.player1_color = player1_color
+        self.player2_color = player2_color
         self.ui.player_name = self.player1_name
+        self.ui.player_color = RED if player1_color == "Red" else LIGHT_BLUE if player1_color == "Blue" else GREEN
+        self.ui.ai_color = RED if player2_color == "Red" else LIGHT_BLUE if player2_color == "Blue" else GREEN
 
     def load_leaderboard(self):
         try:
@@ -190,7 +323,7 @@ class UserVsUserGame:
                             self.turn = 1 - self.turn
                             self.ui.player_name = self.player1_name if self.turn == 0 else self.player2_name
             self.ui.draw_board(self.board.board)
-            self.ui.draw_score((self.player1_score, self.player2_score))
+            self.ui.draw_score((self.player1_score, self.player2_score, self.player1_name, self.player2_name, self.player1_color, self.player2_color))
             if self.game_over:
                 # Log result to leaderboard with timestamp, move count, and winner
                 now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
@@ -247,7 +380,7 @@ class UserVsUserGame:
                             waiting = False
                     self.screen.fill(BLACK)
                     self.ui.draw_board(self.board.board)
-                    self.ui.draw_score((self.player1_score, self.player2_score))
+                    self.ui.draw_score((self.player1_score, self.player2_score, self.player1_name, self.player2_name, self.player1_color, self.player2_color))
                     overlay_surface = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
                     overlay_surface.fill((0, 0, 0, 180))
                     self.screen.blit(overlay_surface, (0, 0))
