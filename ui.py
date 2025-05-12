@@ -289,62 +289,139 @@ class GameMenu:
             screen.fill((0, 0, 0))
             screen.blit(bg_scaled, (x, y))
 
-    def fade_in_background(self, duration=1000):
-        # Fade in the background from black to full opacity
-        clock = pygame.time.Clock()
-        steps = 30
-        for alpha in range(0, 256, max(1, int(255/steps))):
-            temp_surface = pygame.Surface(self.screen.get_size()).convert_alpha()
-            # Always use scroll_x=0 during fade-in to avoid glitches
-            self.blit_centered_bg(self.bg_title1, temp_surface, scroll_x=0)
-            temp_surface.set_alpha(alpha)
-            self.screen.fill((0,0,0))
-            self.screen.blit(temp_surface, (0,0))
-            pygame.display.update()
-            clock.tick(60)
+    def ease_out_quad(self, t):
+        """
+        Quadratic easing out function for smoother animations.
+        """
+        return 1 - (1 - t) * (1 - t)
 
-    def typewriter_text(self, text, font, color, pos, subtitle=None, subtitle_font=None, subtitle_pos=None, delay=110):
-        for i in range(len(text)):
+    def ease_in_out_quad(self, t):
+        """
+        Quadratic easing in-out function for smoother animations.
+        """
+        return 2 * t * t if t < 0.5 else 1 - pow(-2 * t + 2, 2) / 2
+
+    def typewriter_text(self, text, font, color, pos, delay=35):
+        """
+        Display text with a typewriter effect and variable timing.
+        
+        Args:
+            text (str): Text to display
+            font (pygame.font.Font): Font to use
+            color (tuple): RGB color tuple
+            pos (tuple): (x, y) position
+            delay (int): Base delay between characters in milliseconds
+        """
+        clock = pygame.time.Clock()
+        for i in range(len(text) + 1):
+            # Handle events during animation
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.VIDEORESIZE:
+                    self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                    self.handle_resize(event.w, event.h)
+            
+            # Draw background
             self.blit_centered_bg(self.bg_title1, self.screen)
-            # Draw the growing title
-            title_surface = font.render(text[:i+1], True, color)
-            self.screen.blit(title_surface, pos)
-            # Draw subtitle if provided
-            if subtitle and subtitle_font and subtitle_pos:
-                subtitle_surface = subtitle_font.render(subtitle, True, WHITE)
-                self.screen.blit(subtitle_surface, subtitle_pos)
-            pygame.display.update()
-            pygame.time.wait(delay)
-
-    def fade_in_surface(self, surface, pos, bg_img, duration=600):
-        # Fade in a surface by increasing its alpha
-        clock = pygame.time.Clock()
-        steps = 30
-        for alpha in range(0, 256, int(255/steps)):
-            self.blit_centered_bg(bg_img, self.screen)
-            # Draw the full title (already typed)
-            center_x = self.screen_width / 2
-            center_y = self.screen_height / 2
-            title = "connect 4our"
-            title_surface = self.font_large.render(title, True, TITLE_YELLOW)
-            title_pos = (center_x - title_surface.get_width() / 2, center_y - title_surface.get_height() / 2)
-            # Draw previous faded-in elements
-            for s, p, a in getattr(self, '_fadein_prev', []):
-                s.set_alpha(255)
-                self.screen.blit(s, p)
-            # Draw the current surface with alpha
-            surface.set_alpha(alpha)
-            self.screen.blit(surface, pos)
-            pygame.display.update()
+            
+            # Draw current text
+            current_text = text[:i]
+            text_surface = font.render(current_text, True, color)
+            self.screen.blit(text_surface, pos)
+            
+            # Update display
+            pygame.display.flip()
             clock.tick(60)
-        # Store this as faded in
-        if not hasattr(self, '_fadein_prev'):
-            self._fadein_prev = []
-        self._fadein_prev.append((surface.copy(), pos, 255))
-
+            
+            # Variable delay based on character position
+            if i < len(text):
+                # Add slight variation to make it feel more natural
+                char_delay = delay + (10 if text[i] in '.,!?' else 0)
+                pygame.time.delay(char_delay)
+    
+    def fade_in_surface(self, surface, pos, background, duration=800):
+        """
+        Fade in a surface over the background with easing.
+        
+        Args:
+            surface (pygame.Surface): Surface to fade in
+            pos (tuple): (x, y) position
+            background (pygame.Surface): Background surface
+            duration (int): Duration of fade in milliseconds
+        """
+        clock = pygame.time.Clock()
+        fade_surface = surface.copy()
+        fade_surface.set_alpha(0)
+        
+        start_time = pygame.time.get_ticks()
+        while pygame.time.get_ticks() - start_time < duration:
+            # Handle events during animation
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.VIDEORESIZE:
+                    self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                    self.handle_resize(event.w, event.h)
+            
+            # Calculate progress with easing
+            progress = (pygame.time.get_ticks() - start_time) / duration
+            eased_progress = self.ease_out_quad(progress)
+            alpha = int(255 * eased_progress)
+            fade_surface.set_alpha(alpha)
+            
+            # Draw everything
+            self.blit_centered_bg(background, self.screen)
+            self.screen.blit(fade_surface, pos)
+            pygame.display.flip()
+            
+            # Maintain consistent frame rate
+            clock.tick(60)
+        
+        # Ensure final state is fully visible
+        fade_surface.set_alpha(255)
+        self.blit_centered_bg(background, self.screen)
+        self.screen.blit(fade_surface, pos)
+        pygame.display.flip()
+    
+    def fade_in_background(self):
+        """
+        Fade in the background from black to the title background with easing.
+        """
+        clock = pygame.time.Clock()
+        fade_surface = pygame.Surface((self.screen_width, self.screen_height))
+        fade_surface.fill(BLACK)
+        
+        steps = 60  # More steps for smoother animation
+        for i in range(steps + 1):
+            # Handle events during animation
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.VIDEORESIZE:
+                    self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                    self.handle_resize(event.w, event.h)
+            
+            # Calculate progress with easing
+            progress = i / steps
+            eased_progress = self.ease_in_out_quad(progress)
+            alpha = int(255 * (1 - eased_progress))
+            
+            fade_surface.set_alpha(alpha)
+            self.blit_centered_bg(self.bg_title1, self.screen)
+            self.screen.blit(fade_surface, (0, 0))
+            pygame.display.flip()
+            
+            # Maintain consistent frame rate
+            clock.tick(60)
+            pygame.time.delay(5)  # Reduced delay for smoother animation
+    
     def show_title_screen(self):
         """
-        Display the title screen with minimal animations for stability.
+        Display the title screen with fade-in animations and typewriter effects.
         """
         # Initialize text elements
         center_x = self.screen_width / 2
@@ -372,7 +449,20 @@ class GameMenu:
         credits_y = self.screen_height - credits_surface.get_height() - 30
         credits_pos = (center_x - credits_surface.get_width() / 2, credits_y)
         
-        # Simple animation loop
+        # Fade in background
+        self.fade_in_background()
+        
+        # Typewriter effect for title
+        self.typewriter_text(title, title_font, title_color, 
+                           (center_x - title_font.size(title)[0] / 2, 
+                            center_y - title_font.get_height() / 2))
+        
+        # Sequential fade-ins for remaining text
+        self.fade_in_surface(subtitle_surface, subtitle_pos, self.bg_title1)
+        self.fade_in_surface(click_surface, click_pos, self.bg_title1)
+        self.fade_in_surface(credits_surface, credits_pos, self.bg_title1)
+        
+        # Animation loop
         clock = pygame.time.Clock()
         scroll_x = 0
         waiting = True
@@ -391,7 +481,7 @@ class GameMenu:
                 if event.type in [pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN]:
                     waiting = False
             
-            # Draw background
+            # Draw background with scroll
             self.blit_centered_bg(self.bg_title1, self.screen, scroll_x=scroll_x)
             scroll_x += self.bg_scroll_speed
             
