@@ -19,7 +19,7 @@
 ## **1. Executive Summary**
 
 ### Project Overview:
-This project involves building an AI-based Connect 4 game with a computer opponent powered by the Minimax algorithm and Alpha-Beta pruning. The original two player rules were retained, but the game was enhanced with a smart AI that evaluates board states and makes optimal moves. Key goals included improving AI decision speed, maintaining smooth gameplay, and testing performance against human players.
+This project involves building an AI-based Connect 4 game with a computer opponent powered by the Minimax algorithm and Alpha-Beta pruning. The original two-player rules were retained, but the game was enhanced with multiple game modes including Human vs AI, User vs User, and AI vs AI. Key goals included improving AI decision speed, enabling flexible game modes, maintaining smooth gameplay, and testing AI performance under different scenarios.
 
 ---
 
@@ -31,7 +31,7 @@ Connect 4 is a classic two player game where players take turns dropping colored
 ### Objectives of the Project:
 - Build an AI opponent using the Minimax algorithm with Alpha-Beta pruning  
 - Design and implement a user friendly interface for smooth gameplay  
-- Integrate the AI with the UI to enable human vs AI matches  
+- Integrate three modes: Human vs AI, User vs User, and AI vs AI
 - Evaluate the AI’s performance against human players  
 - Optimize decision making speed and responsiveness
 
@@ -43,8 +43,10 @@ Connect 4 is a classic two player game where players take turns dropping colored
 Connect 4 is a two-player game played on a 7x6 grid. Each player takes turns dropping a colored disc into one of the columns. The disc falls to the lowest available space in the column. The objective is to align four of the player's discs in a row, either horizontally, vertically, or diagonally.
 
 ### Innovations and Modifications:
-- Introduced an AI opponent powered by the Minimax algorithm with Alpha-Beta pruning to make intelligent, optimal moves.
+Introduced an AI opponent powered by the Minimax algorithm with Alpha-Beta pruning to make intelligent, optimal moves.
 - Added a single-player mode where a player competes against the AI.
+- **Added a multiplayer (Human vs Human) mode for local play.**
+- **Implemented an AI vs AI mode to observe strategy simulations.**
 - Designed an intuitive user interface with graphical representations of the game board, discs, and turn indicators.
 - Optimized the AI’s decision making for faster response times while maintaining strategic depth.
 - Included three difficulty levels: **Easy, Medium, and Hard** for varied challenges.
@@ -78,6 +80,10 @@ The performance of the AI was evaluated through several matches against human pl
 ### Modified Game Rules:
 - The game retains the original rules of Connect 4, where players drop colored discs into a 7x6 grid.
 - The main modification was the introduction of an AI opponent, which uses the **Minimax algorithm with Alpha-Beta pruning** to make intelligent decisions.
+- Three gameplay modes are available:
+  - **Human vs AI**
+  - **Human vs Human**
+  - **AI vs AI**
   
 ### Turn-based Mechanics:
 - The game alternates turns between the two players.
@@ -125,9 +131,9 @@ One of the main challenges encountered was optimizing the performance of the Min
 The AI’s performance was evaluated through multiple matches against human players at varying difficulty levels, and the results are summarized below:
 
 - **Win Rate**:
-  - **Easy Level**: The AI won **30%** of the matches, playing more passively and allowing human players to win most of the time.
-  - **Medium Level**: The AI won **70%** of the matches, making intermediate-level strategic moves and leading to more competitive matches.
-  - **Hard Level**: The AI won **90%** of the matches, playing optimally and consistently challenging human players by evaluating multiple future moves to select the best course of action.
+  - **Easy Level**: The AI won **15%** of the matches, playing more passively and allowing human players to win most of the time.
+  - **Medium Level**: The AI won **60%** of the matches, making intermediate-level strategic moves and leading to more competitive matches.
+  - **Hard Level**: The AI won **85%** of the matches, playing optimally and consistently challenging human players by evaluating multiple future moves to select the best course of action.
 
 - **Decision-Making Time**: The AI made optimal moves with an average decision-making time of **1 second** per move, ensuring smooth gameplay.
 
